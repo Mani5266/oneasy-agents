@@ -1,0 +1,557 @@
+import { LLPData, Partner } from "../types";
+
+export interface AIReply {
+  message: string;
+  updates: Record<string, unknown>;
+  nextStep: string;
+  validationError: string | null;
+  suggestedOptions: string[];
+  suggestedCheckboxes?: string[];
+  isComplete?: boolean;
+}
+
+/** Extracted data for a single Aadhaar card */
+export interface SingleCardExtraction {
+  fullName: string;
+  salutation: string;
+  relationDescriptor: string;
+  fatherSalutation: string;
+  fatherName: string;
+  dob: string;
+  aadhaarAddress: string;
+}
+
+/**
+ * Focused prompt for extracting data from a SINGLE Aadhaar card image.
+ * Sent one card at a time for maximum accuracy.
+ */
+export function buildSingleCardPrompt(): string {
+  return `You are an expert Aadhaar card OCR system. ONE Aadhaar card image is provided.
+Your task: extract EVERY detail from this card with 100% accuracy.
+
+FIELDS TO EXTRACT:
+
+1. "fullName" — The cardholder's name, printed prominently on the FRONT.
+   Copy EXACTLY as printed, character by character. Check spelling twice.
+
+2. "salutation" — Infer from gender printed on card (Male/पुरुष → "Mr.", Female/महिला → "Mrs." or "Ms.")
+
+3. "relationDescriptor" — One of: "S/O", "D/O", "W/O", "C/O"
+   Look for these markers on the card. They may appear:
+   - On the FRONT below the name
+   - On the BACK above or within the address
+   - In various capitalizations: "S/O", "s/o", "S/o", "C/O", "c/o" etc.
+   - With or without a colon: "S/O:" or "S/O"
+
+4. "fatherSalutation" — "Mr." if S/O or C/O, "Mrs." if D/O or W/O (for mother/spouse)
+
+5. "fatherName" — The name that appears AFTER the relation descriptor (S/O, D/O, W/O, C/O).
+   - Strip any title prefix: remove "Mr.", "Mrs.", "Shri", "Smt.", "Late" etc.
+   - Copy the remaining name EXACTLY as printed.
+   - This MUST NOT be the same as "fullName". If they look identical, re-read the card.
+   - If the card image does not show the relation descriptor area (e.g., only front side uploaded and S/O is on back), set to "".
+
+6. "dob" — Date of Birth or Year of Birth, found on the FRONT.
+   Labeled as "DOB", "Date of Birth", "Year of Birth", "जन्म तिथि".
+   Copy EXACTLY as printed: "15/06/1997" or "1997". Do NOT reformat.
+
+7. "aadhaarAddress" — The full address, usually on the BACK.
+   Copy the ENTIRE address as one string, exactly as printed.
+   If no address is visible (front-only image), set to "".
+
+RULES:
+- Extract ALL 7 fields. Do not skip any.
+- If a field is genuinely not visible in the image (e.g., back side not shown), return "".
+- Do NOT guess or hallucinate. Only return what is clearly printed on the card.
+- Do NOT confuse similar-looking names. Read carefully.
+
+Return ONLY a valid JSON object with exactly these 7 keys:
+{"fullName":"...","salutation":"...","relationDescriptor":"...","fatherSalutation":"...","fatherName":"...","dob":"...","aadhaarAddress":"..."}
+
+No markdown, no code fences, no explanation — just the JSON object.`;
+}
+
+/**
+ * Builds the final conversational response after all cards have been individually extracted.
+ * Takes the merged extraction results and formats the AI reply.
+ */
+export function buildExtractionResponse(
+  extractions: SingleCardExtraction[],
+  numPartners: number
+): AIReply {
+  const updates: Record<string, unknown> = {};
+  const missing: string[] = [];
+
+  for (let i = 0; i < extractions.length; i++) {
+    const ext = extractions[i];
+
+    // Always map whatever was found
+    if (ext.fullName) {
+      updates[`partners[${i}].fullName`] = ext.fullName;
+      updates[`partners[${i}].salutation`] = ext.salutation || "Mr.";
+    }
+    if (ext.relationDescriptor) {
+      updates[`partners[${i}].relationDescriptor`] = ext.relationDescriptor;
+    }
+    if (ext.fatherSalutation) {
+      updates[`partners[${i}].fatherSalutation`] = ext.fatherSalutation;
+    }
+    if (ext.fatherName) {
+      updates[`partners[${i}].fatherName`] = ext.fatherName;
+    }
+    if (ext.dob) {
+      updates[`partners[${i}].dob`] = ext.dob;
+    }
+    if (ext.aadhaarAddress) {
+      updates[`partners[${i}].aadhaarAddress`] = ext.aadhaarAddress;
+    }
+
+    // Track missing fields
+    if (!ext.fullName) missing.push(`Partner ${i + 1}: Full Name`);
+    if (!ext.fatherName) missing.push(`Partner ${i + 1}: Father/Mother/Spouse Name`);
+    if (!ext.dob) missing.push(`Partner ${i + 1}: Date of Birth`);
+  }
+
+  if (missing.length === 0) {
+    // All details extracted — ask about first partner's address
+    const p1 = extractions[0];
+    const summary = extractions
+      .map((ext, i) => `Partner ${i + 1}: ${ext.fullName}, ${ext.relationDescriptor} ${ext.fatherName}, DOB: ${ext.dob}`)
+      .join("\n");
+
+    return {
+      message: `I've extracted and mapped details for all ${extractions.length} partners:\n\n${summary}\n\nStarting with Partner 1 (${p1.fullName}), is this their residential address?\n"${p1.aadhaarAddress || "[No address found — please provide it]"}"`,
+      updates,
+      nextStep: "partner_0",
+      suggestedOptions: p1.aadhaarAddress ? ["Yes: Correct", "No: I'll type it"] : [],
+      suggestedCheckboxes: [],
+      isComplete: false,
+      validationError: null,
+    };
+  } else {
+    let firstMissingPartner = -1;
+    let firstMissingField = "";
+    let firstMissingLabel = "";
+    for (let i = 0; i < extractions.length; i++) {
+      const ext = extractions[i];
+      if (!ext.fullName) {
+        firstMissingPartner = i;
+        firstMissingField = "fullName";
+        firstMissingLabel = "Full Name";
+        break;
+      }
+      if (!ext.fatherName) {
+        firstMissingPartner = i;
+        firstMissingField = "fatherName";
+        firstMissingLabel = "Father/Mother/Spouse Name";
+        break;
+      }
+      if (!ext.dob) {
+        firstMissingPartner = i;
+        firstMissingField = "dob";
+        firstMissingLabel = "Date of Birth";
+        break;
+      }
+    }
+
+    const missingStr = missing.map(m => `- ${m}`).join("\n");
+    const partnerName = extractions[firstMissingPartner]?.fullName || `Partner ${firstMissingPartner + 1}`;
+    const askMessage = `I've mapped the extracted details. However, the following fields are missing:\n\n${missingStr}\n\nLet's fill these in one at a time.\n\n**Partner ${firstMissingPartner + 1} (${partnerName})**: Please provide their **${firstMissingLabel}**.`;
+
+    return {
+      message: askMessage,
+      updates,
+      nextStep: "partner_0",
+      suggestedOptions: [],
+      suggestedCheckboxes: [],
+      isComplete: false,
+      validationError: null,
+    };
+  }
+}
+
+/**
+ * Conversational prompt for all non-file steps.
+ */
+export function buildPrompt(userMsg: string, data: Partial<LLPData>, step: string): string {
+  const partners: Partner[] = (data.partners || []) as Partner[];
+  const numPartners = data.numPartners || partners.length || 2;
+
+  const allExtracted = partners.length > 0 && partners.every(p => p.fullName && p.fatherName && (p.age || p.dob));
+  const nextIdx = allExtracted ? partners.findIndex(p => !p.address?.pin) : -1;
+  const targetIdx = nextIdx !== -1 ? nextIdx : -1;
+  const targetPartner = targetIdx >= 0 ? partners[targetIdx] : null;
+  const nextPartner = targetIdx >= 0 ? partners[targetIdx + 1] : null;
+
+  const missingPartnerIdx = partners.findIndex(p => !p.fullName || !p.fatherName || (!p.age && !p.dob));
+  const mp = missingPartnerIdx !== -1 ? partners[missingPartnerIdx] : null;
+
+  const allAddressesConfirmed = allExtracted && partners.every(p => p.address?.pin);
+
+  let addressSection = "";
+  if (step === "designated_partners") {
+    const partnerNames = partners.map(p => `${p.salutation || ""} ${p.fullName}`.trim()).filter(Boolean);
+    const indexNameMap = partners.map((p, i) =>
+      `  partners[${i}] → "${p.salutation || ""} ${p.fullName}".trim()`
+    ).join("\n");
+
+    const exampleUpdates: Record<string, unknown> = {};
+    partners.forEach((_, i) => {
+      exampleUpdates[`partners[${i}].isDesignatedPartner`] = i < 2 ? true : false;
+      exampleUpdates[`partners[${i}].isManagingPartner`] = i === 0 ? true : false;
+    });
+
+    addressSection = `
+## CURRENT TASK: Designated Partners Selection
+
+PARTNER INDEX MAP (use this to set the correct partner):
+${indexNameMap}
+
+IF the user has NOT selected yet (first time showing this step):
+- Return this response to show the checkboxes:
+  { "message": "Now, who among the partners will be the Designated Partners? Select at least 2.", "updates": {}, "nextStep": "designated_partners", "suggestedCheckboxes": ${JSON.stringify(partnerNames)}, "suggestedOptions": [], "isComplete": false, "validationError": null }
+
+IF the user HAS submitted a checkbox selection (message contains partner names or "selected"):
+- Look up each partner name in the INDEX MAP above to find their exact index.
+- Set "partners[X].isDesignatedPartner" = true for EACH selected partner.
+- Set "partners[X].isDesignatedPartner" = false for EACH partner NOT selected.
+- Set "partners[X].isManagingPartner" = true for EACH selected partner (same as isDesignatedPartner).
+- Set nextStep = "llp_name" (NOT "partner_X", NOT "partner_summary").
+- Validate: at least 2 must be selected. If less than 2 selected, set validationError and repeat the checkboxes.
+- CRITICAL: The message MUST end with: "Now, what will be the name of your LLP? (It must end with 'LLP')"
+- Example updates structure (replace with actual selected/unselected values):
+${JSON.stringify(exampleUpdates, null, 2)}`;
+
+  } else if (mp) {
+    const missingField = !mp.fullName ? "Full Name" : (!mp.fatherName ? "Father's Name" : "Date of Birth");
+    const fieldKey = !mp.fullName ? "fullName" : (!mp.fatherName ? "fatherName" : "dob");
+
+    let nextMissingMsg = "";
+    {
+      const simPartners = partners.map((p, i) => {
+        if (i === missingPartnerIdx) {
+          return { ...p, [fieldKey]: "<filled>" };
+        }
+        return p;
+      });
+      const nextIdx = simPartners.findIndex(p => !p.fullName || !p.fatherName || (!p.age && !p.dob));
+      if (nextIdx !== -1) {
+        const np = simPartners[nextIdx];
+        const nextField = !np.fullName ? "Full Name" : (!np.fatherName ? "Father/Mother/Spouse Name" : "Date of Birth");
+        const nextName = np.fullName || `Partner ${nextIdx + 1}`;
+        nextMissingMsg = `Then immediately ask: "Now, please provide **${nextField}** for **Partner ${nextIdx + 1} (${nextName})**."`;
+      }
+    }
+
+    const currentRelDesc = mp.relationDescriptor || "S/O";
+    const currentFatherSal = mp.fatherSalutation || "Mr.";
+
+    addressSection = `
+## CURRENT TASK: Collect Missing Basic Details for Partner ${missingPartnerIdx + 1}
+
+⚠️ CRITICAL: The user's input is the answer for Partner ${missingPartnerIdx + 1}'s ${missingField}.
+Partner ${missingPartnerIdx + 1} name: "${mp.fullName || "New Partner"}"
+Current relation descriptor: "${currentRelDesc}"
+Current father/spouse salutation: "${currentFatherSal}"
+Missing field: **${missingField}**
+Update key: "partners[${missingPartnerIdx}].${fieldKey}"
+
+DO NOT map this value to any other partner. The index is ${missingPartnerIdx} — use EXACTLY "partners[${missingPartnerIdx}].${fieldKey}".
+${fieldKey === "fatherName" ? `
+⚠️ RELATION DESCRIPTOR RULES — READ CAREFULLY:
+The user may indicate the relationship type in their message. Look for keywords:
+- "father", "dad", "papa", "S/O", "s/o" → relationDescriptor = "S/O", fatherSalutation = "Mr."
+- "mother", "mom", "maa", "D/O", "d/o" → relationDescriptor = "D/O", fatherSalutation = "Mrs."
+- "spouse", "wife", "W/O", "w/o" → relationDescriptor = "W/O", fatherSalutation = "Mr." (if the spouse name sounds male) or "Mrs." (if spouse name sounds female)
+- "husband" → relationDescriptor = "W/O", fatherSalutation = "Mr."
+- "guardian", "C/O", "c/o" → relationDescriptor = "C/O", fatherSalutation = "Mr."
+- If user gives ONLY a name with no relation keyword, keep the current relationDescriptor "${currentRelDesc}" unchanged.
+
+When updating relationDescriptor/fatherSalutation, ALSO include these keys in updates:
+  "partners[${missingPartnerIdx}].relationDescriptor": "<S/O|D/O|W/O|C/O>",
+  "partners[${missingPartnerIdx}].fatherSalutation": "<Mr.|Mrs.>"
+` : ""}
+IF user provides the missing information:
+- updates: { "partners[${missingPartnerIdx}].${fieldKey}": "<user's input — extract just the NAME, strip relation keywords like 'father:', 'spouse:', etc.>" }
+${nextMissingMsg ? `- ${nextMissingMsg}\n  - nextStep: "partner_0"\n  - suggestedOptions: []` :
+`- This was the LAST missing basic detail for ALL partners.
+  - nextStep: "partner_0"
+  - message: "${missingField} for Partner ${missingPartnerIdx + 1} saved! Now all partners have their basic details. Starting with Partner 1's (${partners[0]?.fullName}) address from Aadhaar: '${partners[0]?.aadhaarAddress}', is this correct?"
+  - suggestedOptions: ["Yes: Correct", "No: I'll type it"]`}
+`;
+  } else if (allExtracted && !allAddressesConfirmed && targetPartner) {
+    const partnerNamesForCheckbox = partners.map(p => `${p.salutation || ""} ${p.fullName}`.trim()).filter(Boolean);
+    const isLastPartner = !nextPartner;
+
+    addressSection = `
+## CURRENT TASK: Confirm Partner ${targetIdx + 1}'s (${targetPartner.fullName}) address
+Raw Aadhaar address: "${targetPartner.aadhaarAddress}"
+
+⚠️ ALWAYS include "suggestedOptions": ["Yes: Correct", "No: I'll type it"] in your response for this step.
+
+IF user says "Yes" or any affirmative:
+- Parse the raw address above into fields and return them in "updates":
+  "partners[${targetIdx}].address.doorNo": "<door number>",
+  "partners[${targetIdx}].address.area": "<area/street>",
+  "partners[${targetIdx}].address.city": "<city/town/village>",
+  "partners[${targetIdx}].address.district": "<district>",
+  "partners[${targetIdx}].address.state": "<state>",
+  "partners[${targetIdx}].address.pin": "<6-digit pin code>"
+${isLastPartner ? `- This is the LAST partner. In the SAME response:
+  - Set nextStep = "designated_partners"
+  - Set suggestedOptions = []
+  - Set suggestedCheckboxes = ${JSON.stringify(partnerNamesForCheckbox)}
+  - message = "Partner ${targetIdx + 1}'s address confirmed! Now, who among the partners will be the Designated Partners? (Select at least 2)"` :
+`- Then ask about Partner ${targetIdx + 2} (${nextPartner!.fullName}): "${nextPartner!.aadhaarAddress}"
+- nextStep: "partner_0"
+- suggestedOptions: ["Yes: Correct", "No: I'll type it"]`}
+
+IF user says "No":
+- Ask them to type the correct address for Partner ${targetIdx + 1}
+- updates: {}
+- nextStep: "${step}"
+- suggestedOptions: []
+
+IF user typed a custom address:
+- Parse their text into the same address fields above
+${isLastPartner ? `- nextStep = "designated_partners", suggestedCheckboxes = ${JSON.stringify(partnerNamesForCheckbox)}, message asks about designated partners` : `- Ask about Partner ${targetIdx + 2}`}`;
+  } else {
+    addressSection = `Identify if any partners are completely missing. If so, ask the user to attach all ${numPartners} Aadhaar cards using the 📎 button. Currently ${partners.filter(p=>p.fullName).length} partners have names.`;
+  }
+
+  // ── Step-specific logic for post-confirmation steps ──────────────────────────
+
+  const totalCapital = (data as LLPData).totalCapital || 0;
+  const contributions = (data as LLPData).contributions || [];
+  const profits = (data as LLPData).profits || [];
+
+  const partnerContribExample = partners.map((p, i) =>
+    `  "contributions[${i}].percentage": <share% for ${p.fullName}>,\n  "contributions[${i}].amount": <calculated: share%/100 * totalCapital>`
+  ).join("\n");
+
+  const partnerProfitExample = partners.map((p, i) =>
+    `  "profits[${i}].percentage": <profit% for ${p.fullName}>`
+  ).join("\n");
+
+  const stepSections: Record<string, string> = {
+    num_partners: `
+## STEP: Number of Partners
+USER input: "${userMsg}"
+IF the user's input is a number between 2 and 10:
+  - Set updates: { "numPartners": ${userMsg} }
+  - Message: "Great! Please upload all ${numPartners} Aadhaar card images (one per partner) using the 📎 button below so I can extract each partner's details."
+  - nextStep: "partner_X"
+  - suggestedOptions: []
+ELSE:
+  - Ask: "How many partners will be part of the LLP firm in total? (Enter a number between 2 and 10)"
+  - updates: {}, nextStep: "num_partners"`,
+
+    llp_name: `
+## STEP: LLP Name
+USER input: "${userMsg}"
+IF the user's input IS the LLP name (contains any text, especially ending with "LLP" or "llp"):
+  - Set updates: { "llpName": "${userMsg}" }
+  - Set nextStep: "registered_address"
+  - Message: "✅ Great! '${userMsg}' has been saved as your LLP name. You can already see it appear in the document preview on the right.\n\nNow, what is the registered office address of the LLP? Please provide:\n- Door/Flat No.\n- Area/Street\n- District\n- State\n- PIN Code"
+ELSE IF the user's message is empty, unrelated, or a greeting:
+  - Ask: "What will be the name of your LLP? (Must end with 'LLP', e.g. 'ABC Enterprises LLP')"
+  - updates: {}, nextStep: "llp_name"`,
+
+    registered_address: `
+## STEP: Registered Address
+USER input: "${userMsg}"
+IF the user's input looks like an address (contains street/area/city/district/state/PIN):
+  - Parse the address into: doorNo, area, district, state, pin
+  - Set ALL of these in updates:
+    "registeredAddress.doorNo": "...",
+    "registeredAddress.area": "...",
+    "registeredAddress.district": "...",
+    "registeredAddress.state": "...",
+    "registeredAddress.pin": "...",
+    "executionCity": "<same as district>" ← CRITICAL: sets the [Place] field in the deed header
+  - Message: "✅ Registered address saved! You can see it mapped in the document preview.\n\nNow, what is the total capital contribution of the LLP in Rupees? (e.g. 100000 for ₹1 Lakh)"
+  - nextStep: "total_capital"
+ELSE IF message is empty or not an address:
+  - Ask: "What is the registered office address of the LLP? Please provide:\n- Door/Flat No.\n- Area/Street\n- District\n- State\n- PIN Code"
+  - updates: {}, nextStep: "registered_address"`,
+
+    total_capital: `
+## STEP: Total Capital Contribution
+USER input: "${userMsg}"
+IF the user's input contains a number (the capital amount in Rupees):
+  - Extract the number from input
+  - Validate it is > 0
+  - Set updates: { "totalCapital": <number> }
+  - nextStep: "contributions"
+  - Message: "Capital set to ₹<amount>. Now, what is the contribution percentage for each partner? (must total 100%)\n${partners.map((p) => `- ${p.fullName}`).join("\n")}"
+ELSE:
+  - Ask: "What is the total capital contribution of the LLP in Rupees? (must be greater than 0)"
+  - updates: {}, nextStep: "total_capital"`,
+
+    contributions: `
+## STEP: Partner Capital Shares
+Current total capital: ₹${totalCapital.toLocaleString("en-IN")}
+Partners: ${partners.map((p, i) => `${i + 1}. ${p.fullName}`).join(", ")}
+USER input: "${userMsg}"
+
+IF the user's input contains percentages (numbers that could be partner shares):
+  - Parse the ${numPartners} percentages from input (e.g., "50 30 20" or "50%, 30%, 20%")
+  - Validate they sum to exactly 100. If not, set validationError.
+  - For each partner i, set:
+    "contributions[i].percentage": <parsed %>,
+    "contributions[i].amount": Math.round((<parsed %> / 100) * ${totalCapital})
+  - nextStep: "profits"
+  - CRITICAL: Message MUST end with the profit question: "Now, how will profits and losses be shared among the partners? (must total 100%)\n${partners.map((p, i) => `- Partner ${i + 1} (${p.fullName}): ?%`).join("\n")}"
+ELSE:
+  - Ask: "What is the capital contribution percentage for each partner? (must total 100%)\n${partners.map((p, i) => `- Partner ${i + 1} (${p.fullName}): ?%`).join("\n")}"
+  - updates: {}, nextStep: "contributions"`,
+
+    profits: `
+## STEP: Profit & Loss Sharing
+Partners: ${partners.map((p, i) => `${i + 1}. ${p.fullName}`).join(", ")}
+USER input: "${userMsg}"
+
+IF the user's input contains percentages for profit sharing:
+  - Parse the ${numPartners} percentages from input
+  - Validate they sum to exactly 100. If not, set validationError.
+  - For each partner i, set: "profits[i].percentage": <parsed %>
+  - nextStep: "business_objectives"
+  - CRITICAL: Message MUST end with the business objectives question: "Now, briefly describe the main business activity of your LLP. (e.g. 'Software consulting and IT services')"
+ELSE:
+  - Ask: "How will profits and losses be shared among the partners? (must total 100%)\n${partners.map((p, i) => `- Partner ${i + 1} (${p.fullName}): ?%`).join("\n")}"
+  - updates: {}, nextStep: "profits"`,
+
+    business_objectives: `
+## STEP: Business Objectives
+USER input: "${userMsg}"
+CURRENT businessObjectives in DATA: "${(data as LLPData).businessObjectives || ""}"
+
+CASE 1 — IF user's input is "yes", "Yes", "Yes, include", "include" (affirmative to include objectives):
+  - The objectives were already generated and shown to the user in the previous message.
+  - Take the previously generated 10 objectives from the conversation context.
+  - Set updates: { "businessObjectives": "<all 10 points as one string, joined by newline characters>" }
+  - nextStep: "other_points"
+  - suggestedOptions: ["Yes", "No"]
+  - Message: "Business objectives noted! Finally, are there any other special terms or conditions you'd like to add? (Select 'Yes' to type them, or 'No' to continue)"
+
+CASE 2 — IF user's input is "no", "No", "reject" (user wants to write their own):
+  - Ask: "Please type your own business objectives for the LLP."
+  - updates: {}, nextStep: "business_objectives"
+
+CASE 3 — IF user's input is a description of business activity (a sentence describing what the LLP does, NOT yes/no):
+  - Generate EXACTLY 10 clear, professional, legally appropriate business objective points based on their description.
+  - Format as a numbered list in message.
+  - End with: "Would you like to include these objectives in the agreement?"
+  - updates: {}, nextStep: "business_objectives"
+  - suggestedOptions: ["Yes, include these", "No, I'll write my own"]
+
+CASE 4 — IF user's input is empty or unrelated:
+  - Ask: "Briefly describe the main business activity of your LLP."
+  - updates: {}, nextStep: "business_objectives", suggestedOptions: []`,
+
+    other_points: `
+## STEP: Other Special Points
+USER input: "${userMsg}"
+
+IF user's input is "Yes" (exactly or similar):
+  - nextStep: "other_points"
+  - updates: {}
+  - Message: "Please enter the special terms or conditions you'd like to add to the agreement. I'll map them to the document immediately."
+  - suggestedOptions: ["None / No"]
+
+ELSE IF user's input is "No", "None", or "No, continue":
+  - updates: { "otherPoints": "None" }
+  - isComplete: true
+  - Message: "Got it! No additional points added. Your LLP Agreement is now 100% complete and ready for download!"
+  - suggestedOptions: []
+
+ELSE (user typed actual points):
+  - Set updates: { "otherPoints": "${userMsg}" }
+  - isComplete: true
+  - Message: "✅ Other points saved and updated in the document preview.\n\nYour LLP Agreement is now 100% complete and ready for download!"
+  - suggestedOptions: []`,
+
+    governance: `
+## STEP: Bank Authority
+USER input: "${userMsg}"
+IF user's input mentions "single", "one", "any one":
+  - updates: { "bankAuthority": "Single" }, nextStep: "remuneration"
+  - Message: "Bank authority set to Single. Will the designated partners receive any remuneration?"
+  - suggestedOptions: ["Fixed Amount", "Percentage of Profit", "None"]
+ELSE IF user's input mentions "two", "any two", "2":
+  - updates: { "bankAuthority": "Any Two" }, nextStep: "remuneration"
+  - suggestedOptions: ["Fixed Amount", "Percentage of Profit", "None"]
+ELSE IF user's input mentions "all":
+  - updates: { "bankAuthority": "All" }, nextStep: "remuneration"
+  - suggestedOptions: ["Fixed Amount", "Percentage of Profit", "None"]
+ELSE:
+  - Ask: "For the LLP bank account, who should be authorized to operate it?"
+  - suggestedOptions: ["Single (any one partner)", "Any Two partners", "All partners"]
+  - updates: {}, nextStep: "governance"`,
+
+    remuneration: `
+## STEP: Remuneration
+USER input: "${userMsg}"
+IF user says "fixed" or "fixed amount":
+  - Set updates: { "remunerationType": "Fixed" }
+  - Ask for the fixed amount value
+  - nextStep: "remuneration" until they give the value
+  - When value given: also set "remunerationValue": "<amount>", nextStep: "loans"
+ELSE IF user says "percentage":
+  - Set updates: { "remunerationType": "Percentage" }
+  - Ask for the % value
+  - When given: "remunerationValue": "<value>%", nextStep: "loans"
+ELSE IF user says "none", "no", "None":
+  - updates: { "remunerationType": "None", "remunerationValue": "" }, nextStep: "loans"
+  - Ask: "Will partners be allowed to give loans to the LLP?"
+  - suggestedOptions: ["Yes", "No"]
+ELSE:
+  - Ask: "Will the designated partners receive remuneration?"
+  - suggestedOptions: ["Fixed Amount", "Percentage of Profit", "None"]
+  - updates: {}, nextStep: "remuneration"`,
+
+    loans: `
+## STEP: Partner Loans
+USER input: "${userMsg}"
+IF user says "yes":
+  - Ask for interest rate
+  - When rate given: updates: { "loansEnabled": true, "loanInterestRate": <rate> }, nextStep: "arbitration"
+ELSE IF user says "no":
+  - updates: { "loansEnabled": false }, nextStep: "arbitration"
+  - Message: "Got it. In which city will disputes be resolved through arbitration?"
+ELSE:
+  - Ask: "Will partners be allowed to give loans to the LLP?"
+  - suggestedOptions: ["Yes", "No"]
+  - updates: {}, nextStep: "loans"`,
+
+    arbitration: `
+## STEP: Arbitration City
+(DEPRECATED - Use Default)
+nextStep: "other_points"`,
+  };
+
+  const stepInstruction = stepSections[step] || `Continue the normal conversational flow for step "${step}" based on DATA.`;
+
+  const partnerList = partners.map((p, i) =>
+    `P${i + 1}: name="${p.fullName || "?"}", addr_confirmed=${!!p.address?.pin}`
+  ).join(" | ");
+
+  return `You are "LLP Generator Assistant" — a conversational LLP Agreement assistant.
+Return ONLY valid JSON. No markdown, no code fences.
+
+STEP: ${step}
+USER: "${userMsg}"
+NUM_PARTNERS: ${numPartners}
+PARTNERS: ${partnerList}
+DATA: ${JSON.stringify(data)}
+
+GLOBAL RULES:
+1. Never suggest "Upload Now".
+2. Never go back to a previous step.
+3. Follow the STEP INSTRUCTION below exactly.
+
+${step === "partner_0" || step === "designated_partners" ? addressSection : stepInstruction}
+
+JSON output must always have all these fields:
+{ "message": "...", "updates": {}, "nextStep": "...", "suggestedOptions": [], "suggestedCheckboxes": [], "isComplete": false, "validationError": null }`;
+}

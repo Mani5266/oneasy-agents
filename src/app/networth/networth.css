@@ -1,0 +1,123 @@
+/* ─── Networth-scoped styles ───────────────────────────────────────────────── */
+
+/* Animations */
+@keyframes nw-fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.networth-scope .animate-fade-in {
+  animation: nw-fadeSlideIn 0.25s ease forwards;
+}
+
+@keyframes nw-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+.networth-scope .animate-shake {
+  animation: nw-shake 0.2s ease-in-out 0s 2;
+}
+
+/* AI field-fill flash — gold border pulse */
+@keyframes nw-aiFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+  20%  { box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+
+.networth-scope .ai-flash {
+  animation: nw-aiFlash 1.2s ease-out;
+  border-color: rgba(234, 179, 8, 0.5);
+}
+
+/* Slide-in for chat panel */
+@keyframes nw-slidePanelIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.networth-scope .animate-panel-in {
+  animation: nw-slidePanelIn 0.2s ease-out forwards;
+}
+
+/* Focus Ring Utility */
+.networth-scope .focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(240, 185, 41, 0.3);
+  ring-offset-width: 1px;
+}
+
+/* ─── Print ────────────────────────────────────────────────────────────────── */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm 0 0 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-bg-none {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Certificate container — remove screen styling */
+  .print-full {
+    margin: 0 !important;
+    padding: 0 15mm 10mm 15mm !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    line-height: 1.6 !important;
+    font-size: 12pt !important;
+  }
+
+  /* Allow tables to break across pages; keep individual rows together */
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+
+  /* Signature block should not be orphaned */
+  .print-full > div:last-child { page-break-inside: avoid; }
+
+  .print-full > div {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .print-top-spacer { height: 0 !important; }
+
+  .print-annexure-break {
+    page-break-before: auto !important;
+    break-before: auto !important;
+  }
+
+  .print-annexure-group {
+    break-inside: auto !important;
+    padding-top: 8mm !important;
+    margin-top: 0 !important;
+  }
+
+  .print-signature-block {
+    margin-top: 3em !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
