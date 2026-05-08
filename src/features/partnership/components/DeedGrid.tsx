@@ -9,6 +9,7 @@ import { useDeedActions } from '../hooks/useDeedActions';
 import type { Deed } from '../types';
 import { fmtDate } from '../lib/utils';
 import { dbGetDeedById } from '../lib/db';
+import { requestPaymentForDocument } from '@/hooks/usePaymentGate';
 
 // ---------------------------------------------------------------------------
 // DeedCard
@@ -108,6 +109,8 @@ export function DeedGrid({ onViewDeed }: DeedGridProps) {
 
   const handleDownload = async (id: string) => {
     try {
+      const paid = await requestPaymentForDocument('partnership', id);
+      if (!paid) return;
       const deed = await dbGetDeedById(id);
       if (!deed) return;
       const docUrl = deed.doc_url;

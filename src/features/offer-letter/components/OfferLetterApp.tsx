@@ -8,6 +8,7 @@ import { buildBreakdown } from '../lib/salary';
 import { fmtINR, toWords, formatCardDate, numberToWords } from '../lib/utils';
 import { OfferRecord, OfferPayload, FIELD_STEP_MAP } from '../types';
 import { createClient } from '@/lib/supabase/client';
+import { usePaymentGate } from '@/hooks/usePaymentGate';
 
 // ── Toast Component ──
 function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
@@ -128,6 +129,7 @@ export default function OfferLetterApp() {
 
   const [currentPage, setCurrentPage] = useState<'generator' | 'history'>('generator');
   const [currentOfferId, setCurrentOfferId] = useState<string | null>(null);
+  const { requirePayment, paymentLoading } = usePaymentGate({ agent: 'offerletter', documentId: currentOfferId });
   const [offers, setOffers] = useState<OfferRecord[]>([]);
   const [sidebarDrafts, setSidebarDrafts] = useState<OfferRecord[]>([]);
   const [modalOffer, setModalOffer] = useState<OfferRecord | null>(null);
@@ -320,17 +322,23 @@ export default function OfferLetterApp() {
 
   // ── Download ──
   const handleDownload = useCallback(async (id: string) => {
-    try {
-      const o = await crud.getOfferById(id);
-      if (!o || !o.doc_url) {
-        showToast('error', 'No document found. Please re-generate it first.');
-        return;
+    const doDownload = async () => {
+      try {
+        const o = await crud.getOfferById(id);
+        if (!o || !o.doc_url) {
+          showToast('error', 'No document found. Please re-generate it first.');
+          return;
+        }
+        await crud.downloadDoc(o.doc_url, o.emp_name || 'Employee');
+      } catch (e) {
+        console.error('Download failed:', e);
+        showToast('error', 'Failed to download document. Try re-generating.');
       }
-      await crud.downloadDoc(o.doc_url, o.emp_name || 'Employee');
-    } catch (e) {
-      console.error('Download failed:', e);
-      showToast('error', 'Failed to download document. Try re-generating.');
-    }
+    };
+    // Use imperative payment check for history downloads (id may differ from currentOfferId)
+    const { requestPaymentForDocument } = await import('@/hooks/usePaymentGate');
+    const paid = await requestPaymentForDocument('offerletter', id);
+    if (paid) await doDownload();
   }, [crud, showToast]);
 
   // ── Generate ──
@@ -356,6 +364,11 @@ export default function OfferLetterApp() {
       });
       setCurrentOfferId(saved.id);
       await fetchSidebarDrafts();
+
+      // Payment gate — require payment before generating document
+      const { requestPaymentForDocument } = await import('@/hooks/usePaymentGate');
+      const paid = await requestPaymentForDocument('offerletter', saved.id);
+      if (!paid) { setGenerating(false); return; }
 
       // Generate DOCX
       const supabase = createClient();

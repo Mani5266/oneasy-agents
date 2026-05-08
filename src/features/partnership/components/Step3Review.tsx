@@ -3,12 +3,13 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 import { useWizardStore } from '../hooks/useWizardStore';
 import { useGenerate } from '../hooks/useGenerate';
 import { escapeHTML, fmtDate, safeNumber } from '../lib/utils';
 import { getPartyLabel } from '../types';
+import { usePaymentGate } from '@/hooks/usePaymentGate';
 
 interface Step3ReviewProps {
   onPrev: () => void;
@@ -412,6 +413,18 @@ function DeedPreview() {
 export function Step3Review({ onPrev }: Step3ReviewProps) {
   const { loading, error, showPdfBtn, generate, openPrintView } = useGenerate();
   const isGenerating = useWizardStore((s) => s.isGenerating);
+  const currentDeedId = useWizardStore((s) => s.currentDeedId);
+  const { requirePayment, paymentLoading } = usePaymentGate({ agent: 'partnership', documentId: currentDeedId });
+
+  const gatedGenerate = useCallback(() => {
+    // Generate first (saves + creates document), then gate the download via payment
+    // Since generate() both saves and downloads in one call, we gate the whole thing
+    requirePayment(() => { generate(); });
+  }, [requirePayment, generate]);
+
+  const gatedOpenPrintView = useCallback(() => {
+    requirePayment(() => { openPrintView(); });
+  }, [requirePayment, openPrintView]);
 
   return (
     <div>
@@ -438,8 +451,8 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
         </button>
 
         <button
-          onClick={generate}
-          disabled={loading || isGenerating}
+          onClick={gatedGenerate}
+          disabled={loading || isGenerating || paymentLoading}
           className="btn btn-gen"
         >
           {loading || isGenerating ? (
@@ -457,7 +470,7 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
         </button>
 
         {showPdfBtn && (
-          <button onClick={openPrintView} className="btn btn-pdf">
+          <button onClick={gatedOpenPrintView} className="btn btn-pdf">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6,9 6,2 18,2 18,9" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />

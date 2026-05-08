@@ -9,6 +9,7 @@ import type { Deed, DeedDocument } from '../types';
 import { fmtDate, formatFileSize } from '../lib/utils';
 import { dbGetDeedById, dbGetDocumentVersions } from '../lib/db';
 import { useDeedActions } from '../hooks/useDeedActions';
+import { requestPaymentForDocument } from '@/hooks/usePaymentGate';
 
 // -- Props --
 
@@ -177,6 +178,8 @@ export default function DetailModal({ deedId, onClose, onRefresh }: DetailModalP
   const handleDownloadLatest = async () => {
     if (!deed?.doc_url) return;
     try {
+      const paid = await requestPaymentForDocument('partnership', deed.id);
+      if (!paid) return;
       await downloadDocument(deed.doc_url);
     } catch {
       alert('Failed to download document.');
@@ -184,7 +187,10 @@ export default function DetailModal({ deedId, onClose, onRefresh }: DetailModalP
   };
 
   const handleVersionDownload = async (storagePath: string, fileName: string) => {
+    if (!deed) return;
     try {
+      const paid = await requestPaymentForDocument('partnership', deed.id);
+      if (!paid) return;
       await downloadDocument(storagePath, fileName);
     } catch {
       alert('Failed to download this version.');

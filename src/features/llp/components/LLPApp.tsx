@@ -6,6 +6,7 @@ import ChatPanel from "./ChatPanel";
 import DocumentPanel from "./DocumentPanel";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePaymentGate } from "@/hooks/usePaymentGate";
 
 function setPath(obj: Record<string,unknown>, path: string, val: unknown) {
   const parts = path.replace(/\[(\w+)\]/g, ".$1").split(".");
@@ -33,6 +34,7 @@ export default function LLPApp() {
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
 
   const hasInteracted = useRef(false);
+  const { isPaid, paymentLoading, requirePayment } = usePaymentGate({ agent: 'llp', documentId: sessionId });
 
   useEffect(() => {
     if (initDone.current) return;
@@ -206,8 +208,8 @@ export default function LLPApp() {
           pct={getPct(data)} 
           missing={getMissing(data)} 
           isManual={!!data.manualHtml}
-          onDocx={dlDocx} 
-          onPDF={dlPDF}
+          onDocx={() => requirePayment(() => { dlDocx(); })} 
+          onPDF={() => requirePayment(() => { dlPDF(); })}
           onSaveHtml={handleSaveHtml}
           onResetHtml={handleResetHtml}
         />
