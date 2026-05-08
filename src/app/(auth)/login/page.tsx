@@ -63,7 +63,7 @@ function LoginPageInner() {
           const checkData = await checkRes.json()
           if (checkData.verified) { router.replace('/dashboard'); return }
           await supabase.auth.signOut()
-        } catch { await supabase.auth.signOut() }
+        } catch { try { await supabase.auth.signOut() } catch {} }
       }
       const verified = searchParams.get('verified')
       const errorParam = searchParams.get('error')
@@ -71,7 +71,7 @@ function LoginPageInner() {
       else if (errorParam === 'expired') setError('Verification link has expired.')
       else if (errorParam === 'invalid') setError('Invalid verification link.')
       setChecking(false)
-    })
+    }).catch(() => { setChecking(false) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
