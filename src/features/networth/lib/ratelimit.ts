@@ -129,8 +129,8 @@ export function createLimiter(prefix: string, config: LimiterConfig) {
     return {
       check: async (_identifier: string) => {
         if (process.env.NODE_ENV === "production") {
-          throw new Error(
-            `[SECURITY] Rate limiter "${prefix}" disabled — UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in production.`
+          console.warn(
+            `[ratelimit] Rate limiter "${prefix}" disabled — UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN not set.`
           );
         }
         return {
