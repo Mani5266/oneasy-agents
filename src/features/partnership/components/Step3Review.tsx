@@ -36,7 +36,6 @@ function BuildReview() {
   const sections = useMemo(() => {
     const result: { title: string; rows: [string, string][] }[] = [];
 
-    // Partners
     partners.forEach((p, i) => {
       const roles: string[] = [];
       if (p.isManagingPartner) roles.push('Managing Partner');
@@ -53,7 +52,6 @@ function BuildReview() {
       });
     });
 
-    // Business details
     let durationDisplay = 'At Will of the Partners';
     if (partnershipDuration === 'fixed') {
       const start = fmtDate(partnershipStartDate);
@@ -77,7 +75,6 @@ function BuildReview() {
     }
     result.push({ title: 'Business Details', rows: bizRows });
 
-    // Capital & Profit
     result.push({
       title: 'Capital Contribution',
       rows: partners.map((p, i) => [
@@ -93,7 +90,6 @@ function BuildReview() {
       ]),
     });
 
-    // Clauses
     const managingNames = partners
       .filter((p) => p.isManagingPartner)
       .map((p) => p.name || 'Unnamed')
@@ -125,8 +121,8 @@ function BuildReview() {
   ]);
 
   return (
-    <details className="bg-white border border-navy-100 rounded-[10px] p-5 mb-6" open>
-      <summary className="text-[0.82rem] font-semibold text-navy-800 cursor-pointer select-none flex items-center gap-2">
+    <details open style={{ marginBottom: 'var(--space-6)' }}>
+      <summary className="form-card-title" style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
           <rect x="9" y="3" width="6" height="4" rx="2" />
@@ -134,21 +130,14 @@ function BuildReview() {
         Review Your Data
       </summary>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div className="review-grid" style={{ marginTop: 'var(--space-4)' }}>
         {sections.map((section) => (
-          <div
-            key={section.title}
-            className="border border-navy-100 rounded-sm p-3"
-          >
-            <div className="text-2xs font-semibold text-accent-dark uppercase tracking-wider mb-2">
-              {section.title}
-            </div>
+          <div key={section.title} className="review-card">
+            <div className="review-card-title">{section.title}</div>
             {section.rows.map(([label, value]) => (
-              <div key={label} className="flex justify-between py-1.5 border-b border-navy-50 last:border-0">
-                <span className="text-2xs text-navy-500">{label}</span>
-                <span className="text-2xs text-navy-800 text-right max-w-[60%]">
-                  {value || '\u2014'}
-                </span>
+              <div key={label} className="review-row">
+                <span className="review-label">{label}</span>
+                <span className="review-value">{value || '\u2014'}</span>
               </div>
             ))}
           </div>
@@ -190,7 +179,6 @@ function DeedPreview() {
     const bankOp = bankOperation || 'jointly';
     const addlPts = additionalPoints || '';
 
-    // Partner intros
     const partnerIntros = partners
       .map((p, i) => {
         const name = escapeHTML(p.name || '_______________');
@@ -208,7 +196,6 @@ function DeedPreview() {
       })
       .join('\n');
 
-    // Capital bullets
     const capitalBullets = partners
       .map((p, i) => {
         const name = escapeHTML(p.name || '_______________');
@@ -218,7 +205,6 @@ function DeedPreview() {
       })
       .join('\n');
 
-    // Profit bullets
     const profitBullets = partners
       .map((p, i) => {
         const name = escapeHTML(p.name || '_______________');
@@ -228,13 +214,11 @@ function DeedPreview() {
       })
       .join('\n');
 
-    // Duration
     let durationText = 'The duration of the firm shall be at WILL of the partners.';
     if (partnershipDuration === 'fixed' && partnershipStartDate && partnershipEndDate) {
       durationText = `The duration of the partnership shall be for a fixed period commencing from <strong>${fmtDate(partnershipStartDate)}</strong> and ending on <strong>${fmtDate(partnershipEndDate)}</strong>, unless terminated earlier by mutual consent of all the partners or by operation of law.`;
     }
 
-    // Managing Partners
     const managingPartnersList = partners
       .map((p, i) => ({ ...p, _index: i }))
       .filter((p) => p.isManagingPartner);
@@ -266,7 +250,6 @@ function DeedPreview() {
     ];
     const managingPowersList = managingPowers.map((p) => `<li>${p}</li>`).join('\n');
 
-    // Banking
     const bankAuthPartners = partners
       .map((p, i) => ({ ...p, _index: i }))
       .filter((p) => p.isBankAuthorized);
@@ -402,8 +385,8 @@ function DeedPreview() {
   ]);
 
   return (
-    <details className="bg-white border border-navy-100 rounded-[10px] p-5 mb-6">
-      <summary className="text-[0.82rem] font-semibold text-navy-800 cursor-pointer select-none flex items-center gap-2">
+    <details style={{ marginBottom: 'var(--space-6)' }}>
+      <summary className="form-card-title" style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14,2 14,8 20,8" />
@@ -411,7 +394,8 @@ function DeedPreview() {
         Deed Preview
       </summary>
       <div
-        className="mt-4 p-6 bg-white border border-navy-200 rounded-sm max-h-[600px] overflow-y-auto text-sm text-navy-800 leading-relaxed deed-preview-content"
+        className="deed-preview-content"
+        style={{ marginTop: 'var(--space-4)', padding: 'var(--space-6)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', maxHeight: '600px', overflowY: 'auto', fontSize: 'var(--text-base)', color: 'var(--text-main)', lineHeight: '1.7' }}
         contentEditable
         suppressContentEditableWarning
         dangerouslySetInnerHTML={{ __html: html }}
@@ -429,7 +413,7 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
   const isGenerating = useWizardStore((s) => s.isGenerating);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div>
       {/* Review Grid */}
       <BuildReview />
 
@@ -438,22 +422,15 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
 
       {/* Error message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-sm px-4 py-3 text-[0.82rem] text-red-600 mb-4">
+        <div className="field-error-msg" style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
           {error}
         </div>
       )}
 
       {/* Action buttons */}
-      <div className="flex flex-wrap items-center gap-3 pt-2">
-        <button
-          onClick={onPrev}
-          className="
-            px-5 py-3 border border-navy-200 text-navy-600 rounded-sm
-            min-h-[44px] text-sm font-medium
-            hover:bg-navy-50 transition-all duration-200
-          "
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline mr-2">
+      <div className="generate-actions">
+        <button onClick={onPrev} className="btn btn-back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           Back
@@ -462,25 +439,14 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
         <button
           onClick={generate}
           disabled={loading || isGenerating}
-          className="
-            ml-auto px-6 py-3 bg-accent text-white font-semibold rounded-sm
-            min-h-[44px] text-sm
-            hover:bg-accent-dark hover:-translate-y-px
-            active:translate-y-0
-            disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-200
-            shadow-card
-          "
+          className="btn btn-gen"
         >
           {loading || isGenerating ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-white border-r-transparent rounded-full animate-spin" />
-              Generating...
-            </span>
+            <><span className="spinner-small" /> Generating...</>
           ) : (
             <>
               Generate & Download DOCX
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline ml-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7,10 12,15 17,10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
@@ -490,15 +456,8 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
         </button>
 
         {showPdfBtn && (
-          <button
-            onClick={openPrintView}
-            className="
-              px-5 py-3 border border-accent text-accent-dark rounded-sm
-              min-h-[44px] text-sm font-medium
-              hover:bg-accent-bg transition-all duration-200
-            "
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline mr-2">
+          <button onClick={openPrintView} className="btn btn-pdf">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6,9 6,2 18,2 18,9" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect x="6" y="14" width="12" height="8" />

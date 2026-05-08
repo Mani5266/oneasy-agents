@@ -29,14 +29,19 @@ export default function LLPApp() {
   const [html, setHtml]     = useState("");
   const timer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const isInitialMount = useRef(true);
+  const initDone = useRef(false);
   const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
 
+  const hasInteracted = useRef(false);
+
   useEffect(() => {
+    if (initDone.current) return;
+    initDone.current = true;
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     if (id) {
       setSessionId(id);
+      hasInteracted.current = true;
       supabase.from("llp_agreements").select("*").eq("id", id).single().then(({ data: dbData, error }) => {
         if (!error && dbData && dbData.data && Object.keys(dbData.data).length > 0) {
           setData(dbData.data as LLPData);
@@ -46,42 +51,43 @@ export default function LLPApp() {
           router.replace("/dashboard");
         }
       });
-    } else {
-      // Get user_id for the insert
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        const userId = user?.id;
-        supabase.from("llp_agreements").insert([{ data: defaultData(), step: "num_partners", is_done: false, user_id: userId }]).select().single().then(({ data: dbData, error }) => {
-          if (!error && dbData) {
-            setSessionId(dbData.id);
-            window.history.replaceState({}, "", `?id=${dbData.id}`);
-          }
-        });
-      });
     }
+    // No record created on open — will be created on first real interaction
   }, [router]);
 
   useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return; }
-    if (!sessionId) return;
-    const saveTimer = setTimeout(() => {
-      supabase.from("llp_agreements").update({
-        data, step, is_done: done, updated_at: new Date().toISOString()
-      }).eq("id", sessionId).then(({ error }) => {
-        if (error) console.error("Auto-save failed:", error.message);
-      });
-    }, 1000);
+    // Auto-save as draft once user moves past first step
+    if (step === "num_partners") return;
+    const saveData = async () => {
+      if (!sessionId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
+        const { data: dbData, error } = await supabase.from("llp_agreements").insert([{ data, step, is_done: false, user_id: userId }]).select().single();
+        if (!error && dbData) {
+          setSessionId(dbData.id);
+          window.history.replaceState({}, "", `?id=${dbData.id}`);
+        }
+      } else {
+        await supabase.from("llp_agreements").update({
+          data, step, updated_at: new Date().toISOString()
+        }).eq("id", sessionId);
+      }
+    };
+    const saveTimer = setTimeout(saveData, 1000);
     return () => clearTimeout(saveTimer);
   }, [data, step, done, sessionId]);
 
   useEffect(()=>{
     if (timer.current) clearTimeout(timer.current);
+    // Only render the deed after user has moved past the first step
+    if (step === "num_partners") { setHtml(""); return; }
     timer.current = setTimeout(()=>{
       try {
         setHtml(renderDeed(data, "preview"));
       } catch (err) { console.error("Render deed error:", err); }
     }, 100);
     return ()=>{ if(timer.current) clearTimeout(timer.current); };
-  }, [data]);
+  }, [data, step]);
 
   const applyUpdates = useCallback((updates: Record<string,unknown>)=>{
     setData(prev=>{
@@ -130,7 +136,24 @@ export default function LLPApp() {
     });
   },[]);
 
+  const saveAgreement = async () => {
+    if (sessionId) {
+      // Draft exists — mark as completed
+      await supabase.from("llp_agreements").update({ is_done: true, data, updated_at: new Date().toISOString() }).eq("id", sessionId);
+    } else {
+      // No draft yet — create as completed directly
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      const { data: dbData, error } = await supabase.from("llp_agreements").insert([{ data, step, is_done: true, user_id: userId }]).select().single();
+      if (!error && dbData) {
+        setSessionId(dbData.id);
+      }
+    }
+    setDone(true);
+  };
+
   const dlDocx = async()=>{
+    await saveAgreement();
     const r = await fetch("/api/llp/download-docx",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
     if (!r.ok){alert("Download failed");return;}
     const blob = await r.blob();
@@ -141,6 +164,7 @@ export default function LLPApp() {
   };
 
   const dlPDF = async()=>{
+    await saveAgreement();
     const el = document.getElementById("deedContent");
     const rawHtml = el ? el.innerHTML : (data.manualHtml || html);
     const r = await fetch("/api/llp/download-pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ html: rawHtml, llpName: data.llpName })});
@@ -166,7 +190,7 @@ export default function LLPApp() {
   const restart=()=>{ setData(defaultData()); setStep("num_partners"); setDone(false); setHtml(""); };
 
   return (
-    <div className="mobile-stack" style={{display:"grid",gridTemplateColumns:"420px 1fr",height:"100vh",overflow:"hidden"}}>
+    <div className="mobile-stack" style={{display:"grid",gridTemplateColumns:"420px 1fr",height:"100%",overflow:"hidden"}}>
       <div style={{display: mobileTab === "chat" ? "flex" : "none", flexDirection:"column", height:"100%"}}
            id="chat-section">
         <ChatPanel data={data} step={step} done={done} pct={getPct(data)} sessionId={sessionId}
@@ -174,7 +198,7 @@ export default function LLPApp() {
           onRestore={(d, s, dn) => { setData(d); setStep(s); setDone(dn); }}
           onBackToDashboard={() => router.push("/dashboard")} />
       </div>
-      <div style={{display: mobileTab === "preview" ? "flex" : undefined, flexDirection:"column", height:"100%"}}
+      <div style={{display: mobileTab === "preview" ? "flex" : undefined, flexDirection:"column", height:"100%", overflow:"hidden"}}
            className={mobileTab !== "preview" ? "mobile-hide" : ""}
            id="preview-section">
         <DocumentPanel 

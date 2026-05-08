@@ -331,8 +331,8 @@ export function Sidebar({
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:sticky top-0 left-0 z-50 lg:z-auto
-          h-screen w-72 bg-navy-900 border-r border-navy-800 p-6 flex flex-col no-print
+           fixed lg:relative top-0 left-0 z-50 lg:z-auto
+           h-screen lg:h-full w-72 bg-navy-900 border-r border-navy-800 p-6 flex flex-col no-print
           transition-transform duration-300 ease-in-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}

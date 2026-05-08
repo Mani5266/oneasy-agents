@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Sparkles, Loader2, Mic, Square, X } from "lucide-react";
 import { deepMergeFormData, type ExtractedDeedData } from "../lib/merge";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -255,93 +254,75 @@ export function ChatPanel({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="chat-panel">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-navy-100 bg-navy-50/80 shrink-0">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-bold text-navy-900">AI Assistant</h2>
+      <div className="chat-panel-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
+            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+          </svg>
+          <h2 className="chat-panel-title">AI Assistant</h2>
           {extractedCount > 0 && (
-            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--warning)', background: 'var(--warning-bg)', padding: '2px 6px', borderRadius: '10px' }}>
               {extractedCount} field{extractedCount !== 1 ? "s" : ""}
             </span>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 text-navy-400 hover:text-navy-600 hover:bg-navy-100 rounded-lg transition-colors"
-          aria-label="Close AI panel"
-        >
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="chat-panel-close" aria-label="Close AI panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-3">
-          {messages.length === 0 && (
-            <div className="text-center py-8">
-              <Sparkles className="w-8 h-8 text-accent/40 mx-auto mb-3" />
-              <p className="text-sm text-navy-500 font-medium">
-                Hi! I can help you fill in your partnership deed.
-              </p>
-              <p className="text-xs text-navy-400 mt-1">
-                Tell me about your business and partners, and I&apos;ll fill the form for you.
-              </p>
-            </div>
-          )}
+      <div className="chat-messages">
+        {messages.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 'var(--space-8) 0' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" style={{ margin: '0 auto var(--space-3)', opacity: 0.4 }}>
+              <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+            </svg>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontWeight: 500 }}>
+              Hi! I can help you fill in your partnership deed.
+            </p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-light)', marginTop: 'var(--space-1)' }}>
+              Tell me about your business and partners, and I&apos;ll fill the form for you.
+            </p>
+          </div>
+        )}
 
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-navy-900 text-white rounded-br-md"
-                    : "bg-navy-50 text-navy-700 rounded-bl-md"
-                }`}
-              >
-                {msg.content}
-              </div>
-            </div>
-          ))}
+        {messages.map((msg, i) => (
+          <div key={i} className={`chat-message ${msg.role}`}>
+            {msg.content}
+          </div>
+        ))}
 
-          {sending && (
-            <div className="flex justify-start">
-              <div className="bg-navy-50 rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 text-navy-400 animate-spin" />
-                  <span className="text-xs text-navy-400 font-medium">Thinking...</span>
-                </div>
-              </div>
-            </div>
-          )}
+        {sending && (
+          <div className="chat-message assistant">
+            <span className="spinner-small" style={{ marginRight: 'var(--space-2)' }} />
+            Thinking...
+          </div>
+        )}
 
-          {transcribing && (
-            <div className="flex justify-start">
-              <div className="bg-navy-50 rounded-2xl rounded-bl-md px-3.5 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 text-navy-400 animate-spin" />
-                  <span className="text-xs text-navy-400 font-medium">Transcribing...</span>
-                </div>
-              </div>
-            </div>
-          )}
+        {transcribing && (
+          <div className="chat-message assistant">
+            <span className="spinner-small" style={{ marginRight: 'var(--space-2)' }} />
+            Transcribing...
+          </div>
+        )}
 
-          <div ref={messagesEndRef} />
-        </div>
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Error banner */}
       {error && (
-        <div className="px-3 pb-2 shrink-0">
-          <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs flex items-center justify-between">
-            <span className="line-clamp-2">{error}</span>
+        <div style={{ padding: '0 var(--space-3) var(--space-2)' }}>
+          <div style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)', color: 'var(--error)', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-600 text-[10px] font-semibold ml-2 shrink-0"
+              style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: '10px', fontWeight: 600, cursor: 'pointer', marginLeft: 'var(--space-2)' }}
             >
               Dismiss
             </button>
@@ -350,8 +331,8 @@ export function ChatPanel({
       )}
 
       {/* Input bar */}
-      <div className="border-t border-navy-100 px-3 py-2.5 bg-white shrink-0">
-        <div className="flex items-center gap-1.5">
+      <div className="chat-input-area">
+        <div className="chat-input-row">
           <input
             ref={inputRef}
             type="text"
@@ -371,40 +352,38 @@ export function ChatPanel({
                   : "Tell me about your partnership..."
             }
             disabled={sending || recording || transcribing}
-            className="flex-1 px-3 py-2 rounded-lg border border-navy-200 text-[13px]
-              focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent
-              hover:border-navy-300 transition-all duration-150
-              bg-white disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
+            style={{ flex: 1, padding: 'var(--space-3) var(--space-4)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)', color: 'var(--text-main)', background: 'var(--bg-card)', minHeight: '44px', transition: 'var(--transition)' }}
           />
           {voiceSupported && (
             <button
               onClick={recording ? handleVoiceStop : handleVoiceStart}
               disabled={sending || transcribing}
-              className={`p-2 rounded-lg transition-all duration-150 focus:outline-none shrink-0
-                ${
-                  recording
-                    ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
-                    : "bg-navy-100 text-navy-500 hover:bg-navy-200 hover:text-navy-700"
-                }
-                disabled:opacity-40 disabled:cursor-not-allowed`}
+              className="chat-send-btn"
+              style={{ background: recording ? 'var(--error)' : 'var(--bg-main)', color: recording ? '#fff' : 'var(--text-muted)' }}
               aria-label={recording ? "Stop recording" : "Start voice input"}
             >
               {recording ? (
-                <Square className="w-3.5 h-3.5" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" /></svg>
               ) : (
-                <Mic className="w-3.5 h-3.5" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
               )}
             </button>
           )}
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || sending || recording || transcribing}
-            className="p-2 rounded-lg bg-navy-900 text-white hover:bg-navy-800
-              disabled:opacity-40 disabled:cursor-not-allowed
-              transition-all duration-150 focus:outline-none shrink-0"
+            className="chat-send-btn"
             aria-label="Send message"
           >
-            <Send className="w-3.5 h-3.5" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22,2 15,22 11,13 2,9" />
+            </svg>
           </button>
         </div>
       </div>

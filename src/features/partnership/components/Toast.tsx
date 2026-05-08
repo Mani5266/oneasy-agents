@@ -56,38 +56,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [removeToast]
   );
 
-  const typeStyles: Record<ToastType, string> = {
-    success: 'bg-green-50 border-green-200 text-green-800',
-    error: 'bg-red-50 border-red-200 text-red-800',
-    warning: 'bg-amber-50 border-amber-200 text-amber-800',
-  };
-
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast Container */}
-      <div className="fixed top-5 right-5 z-[9999] max-w-[400px] flex flex-col gap-3">
+      <div className="toast-container">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`
-              flex items-center justify-between gap-3
-              px-5 py-4 rounded-[10px] border text-[0.82rem] leading-snug
-              shadow-lg
-              ${typeStyles[toast.type]}
-              ${removing.has(toast.id)
-                ? 'animate-[toastOut_0.2s_ease_forwards]'
-                : 'animate-[toastIn_0.3s_ease]'
-              }
-            `}
+            className={`toast ${toast.type}${removing.has(toast.id) ? ' removing' : ''}`}
           >
-            <span className="flex items-center gap-2">
-              <span className="text-base">{toastIcons[toast.type]}</span>
+            <span className="toast-content">
+              <span className="toast-icon">{toastIcons[toast.type]}</span>
               {toast.message}
             </span>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-lg opacity-60 hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer leading-none"
+              className="toast-close"
               aria-label="Close notification"
             >
               &times;

@@ -30,11 +30,11 @@ export default async function DashboardPage() {
       { count: offerCount },
       { count: salaryCount },
     ] = await Promise.all([
-      supabase.from('networth_certificates').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('partnership_deeds').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('offerletter_offers').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('salary_calculations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('networth_certificates').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'completed'),
+      supabase.from('partnership_deeds').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('doc_url', 'is', null),
+      supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_done', true),
+      supabase.from('offerletter_offers').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('doc_url', 'is', null),
+      supabase.from('salary_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     ])
 
     stats.networth = networthCount ?? 0

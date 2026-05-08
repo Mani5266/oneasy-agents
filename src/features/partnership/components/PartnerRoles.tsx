@@ -21,9 +21,9 @@ export function PartnerRoles() {
   const fieldErrors = useWizardStore((s) => s.fieldErrors);
 
   return (
-    <div className="bg-white border border-navy-100 rounded-[10px] p-3 md:p-4 mb-4">
+    <div className="partner-roles-checklist">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4 text-[0.82rem] font-semibold text-navy-800">
+      <div className="partner-roles-header">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
           <circle cx="8.5" cy="7" r="4" />
@@ -34,78 +34,51 @@ export function PartnerRoles() {
       </div>
 
       {/* Role Rows */}
-      <div className="flex flex-col gap-2 mb-4">
+      <div className="partner-roles-body">
         {partners.map((partner, i) => {
           const ordinal = ORDINAL_LABELS[i] ?? `${i + 1}th`;
           return (
-            <div
-              key={i}
-              className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3 px-3 py-3 bg-navy-50 rounded-sm"
-            >
+            <div key={i} className="partner-role-row">
               {/* Name */}
-              <div className="text-[0.82rem] md:flex-1 md:min-w-[120px]">
-                <span className="text-accent-dark font-medium">{ordinal}</span>
-                <span className="text-navy-500 ml-1.5">
+              <div className="partner-role-name">
+                <span className="partner-role-ordinal">{ordinal}</span>
+                <span className="partner-role-display-name">
                   {partner.name || `Partner ${i + 1}`}
                 </span>
               </div>
 
-              {/* Role toggles row */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Role toggles */}
+              <div className="partner-role-checks">
                 {/* Managing Partner Toggle */}
-                <label
-                  className={`
-                    inline-flex items-center gap-1.5 px-2.5 py-1.5
-                    border rounded-sm text-2xs font-medium cursor-pointer
-                    transition-all duration-200
-                    ${
-                      partner.isManagingPartner
-                        ? 'border-accent bg-accent/10 text-accent-dark'
-                        : 'border-navy-100 text-navy-500 hover:border-navy-200'
-                    }
-                  `}
-                >
+                <label className="partner-role-toggle">
                   <input
                     type="checkbox"
                     checked={partner.isManagingPartner}
                     onChange={(e) =>
                       updatePartner(i, { isManagingPartner: e.target.checked })
                     }
-                    className="sr-only"
                   />
-                  Managing Partner
+                  <span>Managing Partner</span>
                 </label>
 
                 {/* Bank Authorized Toggle */}
-                <label
-                  className={`
-                    inline-flex items-center gap-1.5 px-2.5 py-1.5
-                    border rounded-sm text-2xs font-medium cursor-pointer
-                    transition-all duration-200
-                    ${
-                      partner.isBankAuthorized
-                        ? 'border-accent bg-accent/10 text-accent-dark'
-                        : 'border-navy-100 text-navy-500 hover:border-navy-200'
-                    }
-                  `}
-                >
+                <label className="partner-role-toggle">
                   <input
                     type="checkbox"
                     checked={partner.isBankAuthorized}
                     onChange={(e) =>
                       updatePartner(i, { isBankAuthorized: e.target.checked })
                     }
-                    className="sr-only"
                   />
-                  Bank Authorized
+                  <span>Bank Authorized</span>
                 </label>
               </div>
 
-              {/* Capital & Profit inputs row */}
-              <div className="flex flex-wrap items-center gap-2 md:gap-3">
+              {/* Capital & Profit inputs */}
+              <div className="partner-role-checks">
                 {/* Capital % */}
-                <div className="flex items-center gap-1">
-                  <span className="text-2xs text-navy-400">Capital</span>
+                <label className="partner-role-toggle">
+                  <span>Capital</span>
                   <input
                     type="number"
                     value={partner.capital || ''}
@@ -113,19 +86,14 @@ export function PartnerRoles() {
                     placeholder="0"
                     min={0}
                     max={100}
-                    className="
-                      w-[60px] md:w-[72px] h-[34px] md:h-[36px] px-2 text-center
-                      border border-navy-200 rounded-sm text-[0.82rem]
-                      focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-                      transition-all duration-200
-                    "
+                    style={{ width: '60px', textAlign: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '4px', fontSize: 'var(--text-sm)' }}
                   />
-                  <span className="text-2xs text-navy-400">%</span>
-                </div>
+                  <span>%</span>
+                </label>
 
                 {/* Profit % */}
-                <div className="flex items-center gap-1">
-                  <span className="text-2xs text-navy-400">Profit</span>
+                <label className="partner-role-toggle">
+                  <span>Profit</span>
                   <input
                     type="number"
                     value={partner.profit || ''}
@@ -134,16 +102,10 @@ export function PartnerRoles() {
                     min={0}
                     max={100}
                     disabled={profitSameAsCapital}
-                    className={`
-                      w-[60px] md:w-[72px] h-[34px] md:h-[36px] px-2 text-center
-                      border border-navy-200 rounded-sm text-[0.82rem]
-                      focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-                      transition-all duration-200
-                      ${profitSameAsCapital ? 'opacity-55 cursor-not-allowed' : ''}
-                    `}
+                    style={{ width: '60px', textAlign: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '4px', fontSize: 'var(--text-sm)', opacity: profitSameAsCapital ? 0.55 : 1 }}
                   />
-                  <span className="text-2xs text-navy-400">%</span>
-                </div>
+                  <span>%</span>
+                </label>
               </div>
             </div>
           );
@@ -151,22 +113,22 @@ export function PartnerRoles() {
       </div>
 
       {/* Capital/Profit Controls */}
-      <div className="flex flex-wrap items-center gap-4 mb-4 px-1">
-        <label className="flex items-center gap-2 text-[0.82rem] text-navy-500 cursor-pointer">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-4)', margin: 'var(--space-4) 0', paddingLeft: 'var(--space-1)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', cursor: 'pointer' }}>
           <input
             type="checkbox"
             checked={profitSameAsCapital}
             onChange={(e) => toggleProfitSync(e.target.checked)}
-            className="w-4 h-4 rounded border-navy-200 text-accent focus:ring-accent"
+            style={{ width: '16px', height: '16px', accentColor: 'var(--accent-dark)' }}
           />
           Profit / Loss sharing same as Capital
         </label>
 
-        <div className="flex gap-3 ml-auto text-2xs">
-          <span className={capitalHint.ok ? 'text-green-600' : 'text-red-600'}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', marginLeft: 'auto', fontSize: 'var(--text-xs)' }}>
+          <span style={{ color: capitalHint.ok ? 'var(--success)' : 'var(--error)' }}>
             Capital: {capitalHint.text}
           </span>
-          <span className={profitHint.ok ? 'text-green-600' : 'text-red-600'}>
+          <span style={{ color: profitHint.ok ? 'var(--success)' : 'var(--error)' }}>
             Profit: {profitHint.text}
           </span>
         </div>
@@ -174,43 +136,36 @@ export function PartnerRoles() {
 
       {/* Validation errors */}
       {fieldErrors.managingPartner && (
-        <p className="text-2xs text-red-600 mb-2">{fieldErrors.managingPartner}</p>
+        <p className="field-error-msg">{fieldErrors.managingPartner}</p>
       )}
       {fieldErrors.bankAuthorized && (
-        <p className="text-2xs text-red-600 mb-2">{fieldErrors.bankAuthorized}</p>
+        <p className="field-error-msg">{fieldErrors.bankAuthorized}</p>
       )}
       {fieldErrors.capitalTotal && (
-        <p className="text-2xs text-red-600 mb-2">{fieldErrors.capitalTotal}</p>
+        <p className="field-error-msg">{fieldErrors.capitalTotal}</p>
       )}
       {fieldErrors.profitTotal && (
-        <p className="text-2xs text-red-600 mb-2">{fieldErrors.profitTotal}</p>
+        <p className="field-error-msg">{fieldErrors.profitTotal}</p>
       )}
 
       {/* Bank Operation Selector */}
-      <div className="border-t border-navy-100 pt-4">
-        <label className="text-[0.82rem] font-medium text-navy-800 block mb-2">
-          Bank Account Operation
-        </label>
-        <select
-          value={bankOperation}
-          onChange={(e) => setField('bankOperation', e.target.value)}
-          className="
-            w-full max-w-xs px-4 py-3 border border-navy-200 rounded-sm text-sm min-h-[44px]
-            bg-white text-navy-800 appearance-none
-            focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-            transition-all duration-200
-            bg-[url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E&quot;)]
-            bg-[position:right_0.75rem_center] bg-[size:1.25rem] pr-9
-          "
-        >
-          <option value="jointly">Jointly (all authorized partners must sign)</option>
-          <option value="either">Either or Survivor (any authorized partner)</option>
-        </select>
-        <div className="mt-2 pl-3 border-l-2 border-accent text-2xs text-navy-500">
+      <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 'var(--space-4)' }}>
+        <div className="field">
+          <label>Bank Account Operation</label>
+          <select
+            value={bankOperation}
+            onChange={(e) => setField('bankOperation', e.target.value)}
+            style={{ maxWidth: '320px' }}
+          >
+            <option value="jointly">Jointly (all authorized partners must sign)</option>
+            <option value="either">Either or Survivor (any authorized partner)</option>
+          </select>
+        </div>
+        <p className="field-hint" style={{ marginTop: 'var(--space-2)', paddingLeft: 'var(--space-3)', borderLeft: '2px solid var(--accent)' }}>
           {bankOperation === 'jointly'
             ? 'All bank-authorized partners must jointly sign for transactions.'
             : 'Any bank-authorized partner can independently sign for transactions.'}
-        </div>
+        </p>
       </div>
     </div>
   );

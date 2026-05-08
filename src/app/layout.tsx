@@ -37,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen antialiased">
+    <html lang="en" className={`h-full ${dmSans.variable} ${dmSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="h-full antialiased">
         {children}
       </body>
     </html>

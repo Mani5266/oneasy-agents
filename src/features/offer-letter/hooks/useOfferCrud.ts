@@ -90,7 +90,7 @@ export function useOfferCrud() {
 
   const downloadDoc = useCallback(async (docUrl: string, empName: string) => {
     const { data: blob, error } = await supabase.storage
-      .from('offer-docs')
+      .from('offerletter-docs')
       .download(docUrl);
     if (error) throw error;
     if (!blob) throw new Error('No file returned');

@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Shield, FileText, Calculator, Mail, Lock, Eye, EyeOff, Loader2, Phone } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react'
 
-/* Friendly error messages for raw Supabase errors */
 function friendlyAuthError(raw: string): string {
   const lower = raw.toLowerCase()
   if (lower.includes('password should contain'))
@@ -20,8 +19,8 @@ function friendlyAuthError(raw: string): string {
 }
 
 function LoginPageInner() {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email')
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -39,7 +38,6 @@ function LoginPageInner() {
   const supabase = createClient()
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  /* Countdown timer for resend OTP */
   useEffect(() => {
     if (countdown <= 0) {
       if (countdownRef.current) clearInterval(countdownRef.current)
@@ -47,476 +45,309 @@ function LoginPageInner() {
     }
     countdownRef.current = setInterval(() => {
       setCountdown((c) => {
-        if (c <= 1) {
-          if (countdownRef.current) clearInterval(countdownRef.current)
-          return 0
-        }
+        if (c <= 1) { if (countdownRef.current) clearInterval(countdownRef.current); return 0 }
         return c - 1
       })
     }, 1000)
     return () => { if (countdownRef.current) clearInterval(countdownRef.current) }
   }, [countdown])
 
-  /* Redirect if already authenticated; read URL params */
   useEffect(() => {
+    const modeParam = searchParams.get('mode')
+    if (modeParam === 'signup') setMode('signup')
+
     supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: unknown } }) => {
       if (user) {
         try {
-          const checkRes = await fetch('/api/networth/check-verification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          })
+          const checkRes = await fetch('/api/networth/check-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
           const checkData = await checkRes.json()
-          if (checkData.verified) {
-            router.replace('/dashboard')
-            return
-          }
+          if (checkData.verified) { router.replace('/dashboard'); return }
           await supabase.auth.signOut()
-        } catch {
-          await supabase.auth.signOut()
-        }
+        } catch { await supabase.auth.signOut() }
       }
-
       const verified = searchParams.get('verified')
       const errorParam = searchParams.get('error')
       if (verified === 'true') setSuccess('Email verified successfully! Please sign in.')
-      else if (errorParam === 'expired') setError('Verification link has expired. Please request a new one.')
-      else if (errorParam === 'invalid') setError('Invalid verification link. Please request a new one.')
-
+      else if (errorParam === 'expired') setError('Verification link has expired.')
+      else if (errorParam === 'invalid') setError('Invalid verification link.')
       setChecking(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const switchTab = (tab: 'login' | 'signup' | 'forgot') => {
-    setMode(tab); setError(''); setSuccess(''); setOtpSent(false); setOtp(''); setCountdown(0)
-  }
-
-  const toggleLoginMethod = (method: 'email' | 'phone') => {
-    setLoginMethod(method); setError(''); setSuccess(''); setOtpSent(false); setOtp(''); setCountdown(0)
-  }
-
-  /* Send OTP */
   const handleSendOtp = async () => {
     setError(''); setLoading(true)
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
+      const res = await fetch('/api/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) })
       const data = await res.json()
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to send OTP.')
-        setLoading(false)
-        return
-      }
-      setOtpSent(true)
-      setCountdown(30)
-      setSuccess('OTP sent to your mobile number.')
-    } catch {
-      setError('Something went wrong. Please try again.')
-    }
+      if (!res.ok || !data.success) { setError(data.error || 'Failed to send OTP.'); setLoading(false); return }
+      setOtpSent(true); setCountdown(30); setSuccess('OTP sent to your mobile number.')
+    } catch { setError('Something went wrong. Please try again.') }
     setLoading(false)
   }
 
-  /* Verify OTP */
   const handleVerifyOtp = async () => {
     setError(''); setSuccess(''); setLoading(true)
     try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp }),
-      })
+      const res = await fetch('/api/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp }) })
       const data = await res.json()
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Verification failed.')
-        setLoading(false)
-        return
-      }
+      if (!res.ok || !data.success) { setError(data.error || 'Verification failed.'); setLoading(false); return }
       router.replace('/dashboard')
-    } catch {
-      setError('Something went wrong. Please try again.')
-    }
+    } catch { setError('Something went wrong. Please try again.') }
     setLoading(false)
   }
 
-  /* Email form submit */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setError(''); setSuccess('')
-
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true); setError(''); setSuccess('')
     try {
-      if (mode === 'forgot') {
-        const res = await fetch('/api/networth/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        })
-        const data = await res.json()
-        if (!res.ok && !data.success) { setError(data.error || 'Something went wrong.'); setLoading(false); return }
-        setSuccess('If an account exists with that email, a password reset link has been sent.')
-        setLoading(false)
-        return
-      } else if (mode === 'signup') {
+      if (mode === 'signup') {
         if (password !== confirmPassword) { setError('Passwords do not match.'); setLoading(false); return }
         if (password.length < 8) { setError('Password must be at least 8 characters.'); setLoading(false); return }
-
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
         if (signUpError) { setError(friendlyAuthError(signUpError.message)); setLoading(false); return }
-
         if (data.session) await supabase.auth.signOut()
-
         if (data.user?.id) {
-          try {
-            await fetch('/api/networth/send-verification', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, userId: data.user.id }),
-            })
-          } catch { /* non-critical */ }
+          try { await fetch('/api/networth/send-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, userId: data.user.id }) }) } catch {}
         }
-
-        setSuccess('Account created! Check your email to verify your account, then come back and login.')
+        setSuccess('Account created! Check your email to verify, then sign in.')
         setPassword(''); setConfirmPassword('')
       } else {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) { setError(friendlyAuthError(signInError.message)); setLoading(false); return }
-
         if (!signInData.user?.id) { await supabase.auth.signOut(); setError('Something went wrong.'); setLoading(false); return }
-
         try {
-          const checkRes = await fetch('/api/networth/check-verification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          })
+          const checkRes = await fetch('/api/networth/check-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
           const checkData = await checkRes.json()
-          if (!checkData.verified) {
-            await supabase.auth.signOut()
-            setError('Please verify your email before logging in. Check your inbox for the verification link.')
-            setLoading(false)
-            return
-          }
-        } catch {
-          await supabase.auth.signOut()
-          setError('Unable to verify your account status. Please try again.')
-          setLoading(false)
-          return
-        }
-
+          if (!checkData.verified) { await supabase.auth.signOut(); setError('Please verify your email before logging in.'); setLoading(false); return }
+        } catch { await supabase.auth.signOut(); setError('Unable to verify account status.'); setLoading(false); return }
         router.replace('/dashboard')
-        return
       }
-    } catch (err) {
-      console.error('Auth error:', err)
-      setError('Something went wrong. Please try again.')
-    }
+    } catch { setError('Something went wrong. Please try again.') }
     setLoading(false)
+  }
+
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/dashboard` } })
+    if (error) setError(error.message)
   }
 
   if (checking) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <Loader2 size={24} className="animate-spin text-navy-600" />
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#0A2640' }}>
+        <Loader2 size={24} className="animate-spin text-white" />
       </div>
     )
   }
 
-  const isLogin = mode === 'login'
-  const isForgot = mode === 'forgot'
-  const isPhoneLogin = isLogin && loginMethod === 'phone'
-
   return (
-    <div className="fixed inset-0 flex">
-      {/* Left Panel - Dark Navy Brand */}
-      <div className="hidden md:flex md:w-[55%] relative overflow-hidden flex-col justify-between p-12"
-        style={{ background: 'linear-gradient(135deg, #0b1220 0%, #0f1a2e 50%, #152442 100%)' }}>
-        <div className="absolute top-0 left-0 right-0 h-1"
-          style={{ background: 'linear-gradient(90deg, #f0b929, #f9d056, #f0b929)' }} />
-        <div className="absolute top-20 right-20 w-80 h-80 rounded-full opacity-[0.06]"
-          style={{ background: 'radial-gradient(circle, #f0b929, transparent)' }} />
+    <div className="fixed inset-0 flex flex-col items-center justify-center px-4" style={{ background: 'linear-gradient(180deg, #0A2640 0%, #0d3050 100%)' }}>
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+        backgroundSize: '60px 60px'
+      }} />
 
-        <div>
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #f0b929, #d9a21e)' }}>
-              <span className="text-white font-bold text-lg">O</span>
-            </div>
-            <span className="text-white/90 font-semibold text-xl tracking-tight">OnEasy</span>
-          </div>
-
-          <h1 className="text-white text-[2.75rem] font-black leading-tight mb-4" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-            AI Agents<br />Platform
-          </h1>
-          <p className="text-white/50 text-lg max-w-md mb-12">
-            Professional document generation and business tools powered by artificial intelligence.
-          </p>
-
-          <div className="space-y-5">
-            {[
-              { icon: Shield, text: 'Net Worth Certificates' },
-              { icon: FileText, text: 'Partnership & LLP Deeds' },
-              { icon: Calculator, text: 'Salary Calculations & Offer Letters' },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(240, 185, 41, 0.15)' }}>
-                  <Icon size={18} style={{ color: '#f0b929' }} />
-                </div>
-                <span className="text-white/80 text-[15px] font-medium">{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-white/30 text-sm">&copy; 2026 OnEasy. All rights reserved.</p>
+      {/* Logo */}
+      <div className="relative z-10 mb-8">
+        <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-dm-serif)' }}>
+          <span className="text-white">On</span>
+          <span className="text-[#C80009]">E</span>
+          <span className="text-white">asy</span>
+          <span className="text-white/60 text-lg align-top">&#8482;</span>
+        </h1>
       </div>
 
-      {/* Right Panel - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-[420px]">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 md:hidden">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #f0b929, #d9a21e)' }}>
-              <span className="text-white font-bold text-sm">O</span>
+      {/* White Card */}
+      <div className="relative z-10 w-full max-w-[460px] bg-white rounded-2xl shadow-2xl p-8 md:p-10">
+        <h2 className="text-2xl font-bold text-center text-gray-900 mb-1" style={{ fontFamily: 'var(--font-dm-serif)', fontStyle: 'italic' }}>
+          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+        </h2>
+        <p className="text-center text-gray-500 text-sm mb-6">
+          {mode === 'login' ? 'Sign In to your account' : 'Sign up for a new account'}
+        </p>
+
+        {/* Error/Success */}
+        {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
+        {success && <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">{success}</div>}
+
+        {/* Phone / Email Tabs */}
+        <div className="flex border-b border-gray-200 mb-6">
+          <button
+            onClick={() => { setLoginMethod('phone'); setError(''); setSuccess(''); setOtpSent(false); setOtp('') }}
+            className={`flex-1 pb-3 text-sm font-medium transition-all border-b-2 ${
+              loginMethod === 'phone' ? 'border-[#0A2640] text-[#0A2640]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Phone Number
+          </button>
+          <button
+            onClick={() => { setLoginMethod('email'); setError(''); setSuccess('') }}
+            className={`flex-1 pb-3 text-sm font-medium transition-all border-b-2 ${
+              loginMethod === 'email' ? 'border-[#0A2640] text-[#0A2640]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Email Id
+          </button>
+        </div>
+
+        {/* Phone Form */}
+        {loginMethod === 'phone' ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+            <div className="flex gap-2 mb-5">
+              <div className="px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 text-sm font-medium shrink-0 flex items-center">
+                +91
+              </div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="Enter your Phone Number"
+                maxLength={10}
+                autoComplete="tel"
+                className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2640]/20 focus:border-[#0A2640] transition-all"
+              />
             </div>
-            <span className="font-semibold text-lg text-navy-900">OnEasy</span>
-          </div>
 
-          {/* Heading */}
-          <h2 className="text-2xl font-bold text-navy-900 mb-1">
-            {isForgot ? 'Reset your password' : isLogin ? 'Welcome back' : 'Create your account'}
-          </h2>
-          <p className="text-[var(--text-muted)] text-sm mb-8">
-            {isForgot ? "Enter your email and we'll send you a reset link." : isLogin ? 'Sign in to access your AI agents' : 'Get started with OnEasy AI agents'}
-          </p>
-
-          {/* Login/Signup Toggle */}
-          {!isForgot && (
-            <div className="flex gap-1 p-1 rounded-[var(--radius)] border border-navy-200 mb-6 bg-navy-50/50">
-              <button
-                onClick={() => switchTab('login')}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isLogin ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:text-navy-800'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => switchTab('signup')}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  mode === 'signup' ? 'bg-navy-900 text-white shadow-sm' : 'text-navy-600 hover:text-navy-800'
-                }`}
-              >
-                Sign Up
-              </button>
-            </div>
-          )}
-
-          {/* Login method toggle (only on login tab) */}
-          {isLogin && !isForgot && (
-            <div className="flex mb-6 gap-2">
+            {!otpSent ? (
               <button
                 type="button"
-                onClick={() => toggleLoginMethod('email')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg border transition-all cursor-pointer ${
-                  loginMethod === 'email'
-                    ? 'border-gold-500 bg-gold-500/10 text-gold-700'
-                    : 'border-navy-200 text-navy-400 hover:border-navy-300'
-                }`}
-              >
-                <Mail size={16} />
-                Email
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleLoginMethod('phone')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg border transition-all cursor-pointer ${
-                  loginMethod === 'phone'
-                    ? 'border-gold-500 bg-gold-500/10 text-gold-700'
-                    : 'border-navy-200 text-navy-400 hover:border-navy-300'
-                }`}
-              >
-                <Phone size={16} />
-                Mobile OTP
-              </button>
-            </div>
-          )}
-
-          {/* Error/Success */}
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-              {success}
-            </div>
-          )}
-
-          {/* Phone OTP Form */}
-          {isPhoneLogin ? (
-            <div>
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-navy-700 mb-1.5">Mobile Number</label>
-                <div className="flex gap-2">
-                  <div className="px-4 py-3 bg-navy-50 border border-navy-200 rounded-lg text-navy-500 text-sm font-medium shrink-0">
-                    +91
-                  </div>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="9876543210"
-                    maxLength={10}
-                    autoComplete="tel"
-                    className="w-full px-4 py-3 rounded-lg border border-navy-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              {!otpSent ? (
-                <button
-                  type="button"
-                  onClick={handleSendOtp}
-                  disabled={loading || phone.length !== 10}
-                  className="w-full py-3 rounded-lg bg-navy-900 text-white font-semibold text-sm hover:bg-navy-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading && <Loader2 size={18} className="animate-spin" />}
-                  {loading ? 'Sending...' : 'Send OTP'}
-                </button>
-              ) : (
-                <>
-                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-navy-700 mb-1.5">Enter OTP</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6-digit OTP"
-                      maxLength={6}
-                      autoComplete="one-time-code"
-                      autoFocus
-                      className="w-full px-4 py-3 rounded-lg border border-navy-200 text-sm text-center tracking-[0.3em] font-mono focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500 transition-all"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleVerifyOtp}
-                    disabled={loading || otp.length !== 6}
-                    className="w-full py-3 rounded-lg bg-navy-900 text-white font-semibold text-sm hover:bg-navy-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {loading && <Loader2 size={18} className="animate-spin" />}
-                    {loading ? 'Verifying...' : 'Verify & Sign In'}
-                  </button>
-
-                  <div className="text-center mt-3">
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={countdown > 0 || loading}
-                      className="text-sm text-navy-400 hover:text-navy-900 font-medium cursor-pointer hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none"
-                    >
-                      {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            /* Email Form */
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-navy-700 mb-1.5">Email</label>
-                <div className="relative">
-                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-navy-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500 transition-all"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
-
-              {!isForgot && (
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-1.5">Password</label>
-                  <div className="relative">
-                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      className="w-full pl-10 pr-11 py-3 rounded-lg border border-navy-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500 transition-all"
-                      placeholder="Enter your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-600"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {isLogin && (
-                    <div className="flex justify-end mt-1.5">
-                      <a onClick={() => switchTab('forgot')} className="text-sm text-gold-600 hover:text-gold-700 font-medium cursor-pointer">
-                        Forgot password?
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-1.5">Confirm Password</label>
-                  <div className="relative">
-                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" />
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-navy-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500 transition-all"
-                      placeholder="Confirm your password"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-lg bg-navy-900 text-white font-semibold text-sm hover:bg-navy-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={handleSendOtp}
+                disabled={loading || phone.length !== 10}
+                className="w-full py-3.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #0A2640 0%, #153d5e 100%)' }}
               >
                 {loading && <Loader2 size={18} className="animate-spin" />}
-                {loading ? 'Please wait...' : isForgot ? 'Send Reset Link' : isLogin ? 'Sign In' : 'Create Account'}
+                {loading ? 'Sending...' : 'Send OTP'}
               </button>
-            </form>
-          )}
-
-          {/* Footer link */}
-          <div className="text-center mt-5 text-sm text-navy-400">
-            {isForgot ? (
-              <>Remember your password?{' '}<a onClick={() => switchTab('login')} className="text-navy-900 font-semibold cursor-pointer hover:underline">Back to Login</a></>
-            ) : isLogin ? (
-              <>Don&apos;t have an account?{' '}<a onClick={() => switchTab('signup')} className="text-navy-900 font-semibold cursor-pointer hover:underline">Sign up</a></>
             ) : (
-              <>Already have an account?{' '}<a onClick={() => switchTab('login')} className="text-navy-900 font-semibold cursor-pointer hover:underline">Login</a></>
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Enter OTP</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit OTP"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm text-center tracking-[0.3em] font-mono mb-4 focus:outline-none focus:ring-2 focus:ring-[#0A2640]/20 focus:border-[#0A2640] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyOtp}
+                  disabled={loading || otp.length !== 6}
+                  className="w-full py-3.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #0A2640 0%, #153d5e 100%)' }}
+                >
+                  {loading && <Loader2 size={18} className="animate-spin" />}
+                  {loading ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+                <div className="text-center mt-3">
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={countdown > 0 || loading}
+                    className="text-sm text-gray-400 hover:text-[#0A2640] font-medium cursor-pointer hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none"
+                  >
+                    {countdown > 0 ? `Resend OTP in ${countdown}s` : 'Resend OTP'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
+        ) : (
+          /* Email Form */
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <div className="relative">
+                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2640]/20 focus:border-[#0A2640] transition-all"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <div className="relative">
+                <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full pl-10 pr-11 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2640]/20 focus:border-[#0A2640] transition-all"
+                  placeholder="Enter your password"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <div className="relative">
+                  <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2640]/20 focus:border-[#0A2640] transition-all"
+                    placeholder="Confirm your password"
+                  />
+                </div>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-lg text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #0A2640 0%, #153d5e 100%)' }}
+            >
+              {loading && <Loader2 size={18} className="animate-spin" />}
+              {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
+        )}
+
+        {/* Or divider */}
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-sm text-gray-400">Or</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* Social Sign-In */}
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Sign in with Google
+          </button>
+
+        </div>
+
+        {/* Mode switch */}
+        <div className="text-center mt-6 text-sm text-gray-500">
+          {mode === 'login' ? (
+            <>Don&apos;t have an account?{' '}<button onClick={() => { setMode('signup'); setError(''); setSuccess('') }} className="text-[#0A2640] font-semibold hover:underline bg-transparent border-none cursor-pointer">Sign up</button></>
+          ) : (
+            <>Already have an account?{' '}<button onClick={() => { setMode('login'); setError(''); setSuccess('') }} className="text-[#0A2640] font-semibold hover:underline bg-transparent border-none cursor-pointer">Sign in</button></>
+          )}
         </div>
       </div>
     </div>
@@ -526,8 +357,8 @@ function LoginPageInner() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <Loader2 size={24} className="animate-spin text-navy-600" />
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#0A2640' }}>
+        <Loader2 size={24} className="animate-spin text-white" />
       </div>
     }>
       <LoginPageInner />

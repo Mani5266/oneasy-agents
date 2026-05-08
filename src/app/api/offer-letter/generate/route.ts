@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const { error: uploadError } = await supabase.storage
-        .from('offer-docs')
+        .from('offerletter-docs')
         .upload(storagePath, buffer, {
           contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           upsert: true,

@@ -1,6 +1,6 @@
 // ── SUPABASE CRUD HELPERS ────────────────────────────────────────────────────
 // Table: partnership_deeds (renamed from deeds)
-// Child tables: partners, business_addresses, deed_documents
+// Child tables: partnership_partners, partnership_addresses, partnership_documents
 
 import { supabase } from './supabase';
 import type {
@@ -89,7 +89,7 @@ export async function dbGetDeeds(): Promise<Deed[]> {
   let data, error;
   ({ data, error } = await supabase
     .from('partnership_deeds')
-    .select('*, deed_documents(count)')
+    .select('*, partnership_documents(count)')
     .order('created_at', { ascending: false }));
 
   if (error) {
@@ -104,7 +104,7 @@ export async function dbGetDeeds(): Promise<Deed[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data as any[]) || []).map((d) => ({
     ...d,
-    _versionCount: d.deed_documents?.[0]?.count ?? 0,
+    _versionCount: d.partnership_documents?.[0]?.count ?? 0,
   })) as Deed[];
 }
 
@@ -125,12 +125,12 @@ export async function dbGetDeedById(id: string): Promise<Deed> {
   try {
     const [partnersRes, addressRes] = await Promise.all([
       supabase
-        .from('partners')
+        .from('partnership_partners')
         .select('*')
         .eq('deed_id', id)
         .order('ordinal', { ascending: true }),
       supabase
-        .from('business_addresses')
+        .from('partnership_addresses')
         .select('*')
         .eq('deed_id', id)
         .maybeSingle(),
@@ -197,7 +197,7 @@ export async function dbUpsertPartners(
     return;
 
   const { error: delError } = await supabase
-    .from('partners')
+    .from('partnership_partners')
     .delete()
     .eq('deed_id', deedId);
   if (delError) throw delError;
@@ -216,7 +216,7 @@ export async function dbUpsertPartners(
     is_bank_authorized: !!p.isBankAuthorized,
   }));
 
-  const { error: insError } = await supabase.from('partners').insert(rows);
+  const { error: insError } = await supabase.from('partnership_partners').insert(rows);
   if (insError) throw insError;
 }
 
@@ -237,7 +237,7 @@ export async function dbUpsertAddress(
   };
 
   const { error } = await supabase
-    .from('business_addresses')
+    .from('partnership_addresses')
     .upsert(row, { onConflict: 'deed_id' });
   if (error) throw error;
 }
@@ -248,13 +248,13 @@ export async function dbGetDocumentVersions(
   deedId: string
 ): Promise<DeedDocument[]> {
   const { data, error } = await supabase
-    .from('deed_documents')
+    .from('partnership_documents')
     .select('*')
     .eq('deed_id', deedId)
     .order('version', { ascending: false });
   if (error) {
     console.warn(
-      'deed_documents query failed (table may not exist yet):',
+      'partnership_documents query failed (table may not exist yet):',
       error.message
     );
     return [];

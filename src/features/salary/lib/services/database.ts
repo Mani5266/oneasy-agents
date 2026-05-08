@@ -14,7 +14,7 @@ import { getSupabaseClient } from "./supabase";
 import type { SalaryBreakdown } from "../engine/salary-calculator";
 import { earningsTotal, deductionsTotal } from "./helpers";
 
-const PAYSLIPS_BUCKET = "payslips";
+const PAYSLIPS_BUCKET = "salary-payslips";
 
 function round2(n: number) {
   return Math.round(n * 100) / 100;

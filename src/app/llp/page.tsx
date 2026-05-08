@@ -2,5 +2,9 @@
 import LLPApp from "@/features/llp/components/LLPApp";
 
 export default function LLPPage() {
-  return <LLPApp />;
+  return (
+    <div className="h-full w-full overflow-hidden">
+      <LLPApp />
+    </div>
+  );
 }

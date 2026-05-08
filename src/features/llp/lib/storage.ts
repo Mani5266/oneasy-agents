@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-const BUCKET = "documents";
+const BUCKET = "llp-docs";
 const SIGNED_URL_EXPIRY = 300; // 5 minutes
 
 /**

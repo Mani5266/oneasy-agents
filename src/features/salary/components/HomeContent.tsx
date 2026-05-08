@@ -126,6 +126,7 @@ const allTabs: TabItem[] = navGroups.flatMap((g) => [...g.items]);
 export default function HomeContent() {
   const [activeTab, setActiveTab] = useState<TabId>("calculator");
   const [editRecord, setEditRecord] = useState<PayslipHistoryRecord | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const currentTab = allTabs.find((t) => t.id === activeTab)!;
 
   const handleEditPayslip = (record: PayslipHistoryRecord) => {
@@ -138,9 +139,15 @@ export default function HomeContent() {
   };
 
   return (
-    <div className="flex h-screen bg-[var(--bg-base)]">
+    <div className="salary-app-shell flex h-full bg-[var(--bg-base)]">
+      {/* Mobile hamburger */}
+      <button className="salary-mobile-hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Open menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      {/* Mobile overlay */}
+      <div className={`salary-mobile-overlay${mobileMenuOpen ? ' open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
       {/* ─── Sidebar ─── */}
-      <aside className="w-[240px] border-r border-[var(--border-default)] bg-white flex flex-col shrink-0">
+      <aside className={`w-[240px] border-r border-[var(--border-default)] bg-white flex flex-col shrink-0${mobileMenuOpen ? ' mobile-open' : ''}`}>
         {/* Brand */}
         <div className="px-5 py-5 border-b border-[var(--border-default)]">
           <div className="flex items-center gap-3">
@@ -176,6 +183,7 @@ export default function HomeContent() {
                       onClick={() => {
                         setActiveTab(tab.id as TabId);
                         if (tab.id !== "payslip") setEditRecord(null);
+                        setMobileMenuOpen(false);
                       }}
                       className={`sidebar-nav-item ${isActive ? "active" : ""}`}
                     >

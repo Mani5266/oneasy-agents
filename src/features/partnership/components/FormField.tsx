@@ -62,28 +62,21 @@ export function FormField({
     if (fieldError) clearFieldError(id);
   };
 
-  const inputClasses = `
-    w-full px-4 py-3 border rounded-sm text-sm min-h-[44px]
-    bg-white text-navy-800
-    placeholder:text-navy-400
-    focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-    transition-all duration-200 ease
-    ${fieldError ? 'border-red-600 ring-[3px] ring-red-600/10' : 'border-navy-200'}
-    ${disabled ? 'opacity-55 cursor-not-allowed bg-navy-50' : ''}
-  `.trim();
-
-  const selectClasses = `${inputClasses} pr-9 appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E")] bg-[position:right_0.75rem_center] bg-[size:1.25rem]`;
+  const fieldClasses = [
+    'field',
+    fieldError ? 'error' : '',
+    fullWidth ? 'full-width' : '',
+    className,
+  ].filter(Boolean).join(' ');
 
   return (
-    <div
-      className={`flex flex-col gap-2 ${fullWidth ? 'col-span-full' : ''} ${className}`}
-    >
-      <label htmlFor={id} className="text-[0.82rem] font-medium text-navy-800">
+    <div className={fieldClasses}>
+      <label htmlFor={id}>
         {label}
-        {required && <span className="text-red-600 ml-0.5">*</span>}
+        {required && <span className="req">*</span>}
       </label>
 
-      <div className="relative">
+      <div style={{ position: 'relative' }}>
         {as === 'textarea' ? (
           <textarea
             id={id}
@@ -94,7 +87,6 @@ export function FormField({
             disabled={disabled}
             rows={rows}
             autoFocus={autoFocus}
-            className={`${inputClasses} resize-y min-h-[80px]`}
           />
         ) : as === 'select' ? (
           <select
@@ -104,7 +96,6 @@ export function FormField({
             onBlur={onBlur}
             disabled={disabled}
             autoFocus={autoFocus}
-            className={selectClasses}
           >
             {children}
           </select>
@@ -121,12 +112,19 @@ export function FormField({
             max={max}
             step={step}
             autoFocus={autoFocus}
-            className={inputClasses}
           />
         )}
 
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-2xs text-navy-400 pointer-events-none">
+          <span style={{
+            position: 'absolute',
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-light)',
+            pointerEvents: 'none',
+          }}>
             {suffix}
           </span>
         )}
@@ -135,11 +133,11 @@ export function FormField({
       {extra}
 
       {fieldError && (
-        <p className="text-2xs text-red-600">{fieldError}</p>
+        <p className="field-error-msg">{fieldError}</p>
       )}
 
       {hint && !fieldError && (
-        <p className="text-2xs text-navy-500">{hint}</p>
+        <p className="field-hint">{hint}</p>
       )}
     </div>
   );

@@ -818,7 +818,7 @@ function WizardShell() {
   // Block rendering until auth is confirmed
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="h-full flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-slate-400">Loading...</span>
@@ -828,8 +828,8 @@ function WizardShell() {
   }
 
   return (
-    <div className="min-h-screen print-bg-none bg-slate-50">
-      <div className="flex flex-col lg:flex-row min-h-screen">
+    <div className="h-full print-bg-none bg-slate-50 overflow-hidden">
+      <div className="flex flex-col lg:flex-row h-full">
         <Sidebar
           history={history}
           certificateId={certificateId}
@@ -855,7 +855,7 @@ function WizardShell() {
                 className="
                   fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto
                   lg:flex-[27] lg:min-w-0 lg:border-r lg:border-slate-200
-                  h-[100dvh] lg:sticky lg:top-0 lg:h-screen animate-panel-in no-print
+                  h-[100dvh] lg:h-full animate-panel-in no-print
                 "
               >
                 <ChatPanel
@@ -871,10 +871,10 @@ function WizardShell() {
           )}
 
           {/* Form area — shrinks when chat is open */}
-          <div className={`${isChatOpen ? "lg:flex-[73] lg:min-w-0" : "flex-1"} px-4 py-8 lg:px-12 lg:py-10 overflow-y-auto`}>
+          <div className={`${isChatOpen ? "lg:flex-[73] lg:min-w-0" : "flex-1"} px-4 py-4 lg:px-10 lg:py-6 overflow-y-auto`}>
             <div className="max-w-4xl mx-auto">
             {/* Page Header */}
-            <div className="no-print mb-6 mt-10 lg:mt-0">
+            <div className="no-print mb-4 mt-6 lg:mt-0">
               <h1 className="text-2xl lg:text-3xl font-black text-navy-950 tracking-tight">
                 Net Worth Certificate
               </h1>
@@ -897,7 +897,7 @@ function WizardShell() {
             </div>
 
             {/* Progress Tabs */}
-            <div className="no-print mb-8">
+            <div className="no-print mb-4">
               <ProgressBar
                 steps={STEPS}
                 currentStep={step}

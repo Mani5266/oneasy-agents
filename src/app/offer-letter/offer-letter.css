@@ -65,6 +65,8 @@
   background: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
+  height: 100%;
+  overflow: hidden;
 }
 
 .offer-letter-app *, .offer-letter-app *::before, .offer-letter-app *::after {
@@ -96,7 +98,7 @@
 /* ── APP SHELL ── */
 .offer-letter-app .app-shell {
   display: flex;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -104,7 +106,7 @@
 .offer-letter-app .sidebar {
   width: 280px; min-width: 280px; background: var(--sidebar-bg);
   display: flex; flex-direction: column; justify-content: space-between;
-  height: 100vh; overflow: hidden;
+  height: 100%; overflow: hidden;
 }
 
 .offer-letter-app .sidebar-top {
@@ -269,7 +271,7 @@
 
 /* ── CONTENT AREA ── */
 .offer-letter-app .content-area {
-  flex: 1; background: var(--bg-main); overflow-y: auto; height: 100vh;
+  flex: 1; background: var(--bg-main); overflow-y: auto; height: 100%;
 }
 
 .offer-letter-app .generator-page {

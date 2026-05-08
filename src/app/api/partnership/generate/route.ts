@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       let version = 1;
       if (deedId && deedId !== 'unknown') {
         const { data: latestDoc } = await admin
-          .from('deed_documents')
+          .from('partnership_documents')
           .select('version')
           .eq('deed_id', deedId)
           .order('version', { ascending: false })
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       const storagePath = `deeds/${user.id}/${deedId}/v${version}/${filename}`;
 
       const { error: uploadError } = await admin.storage
-        .from('deed-docs')
+        .from('partnership-docs')
         .upload(storagePath, buffer, {
           contentType:
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       } else if (deedId && deedId !== 'unknown') {
         // Insert version record + update partnership_deeds.doc_url in parallel
         await Promise.all([
-          admin.from('deed_documents').insert({
+          admin.from('partnership_documents').insert({
             deed_id: deedId,
             user_id: user.id,
             storage_path: storagePath,

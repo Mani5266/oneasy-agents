@@ -52,33 +52,27 @@ export function PartnerCard({
   const ordinal = ORDINAL_LABELS[index] ?? `${index + 1}th`;
 
   return (
-    <div className="bg-navy-50 border border-navy-100 rounded-[10px] p-3 sm:p-4 md:p-5 mb-2 hover:border-navy-200 transition-all duration-200">
+    <div className="partner-card">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-2xs font-semibold text-accent-dark uppercase tracking-wider">
+      <div className="partner-card-header">
+        <h4 className="partner-card-title">
           {ordinal} Party (Partner {index + 1})
         </h4>
-        <div className="flex items-center gap-2">
+        <div className="partner-card-actions-top">
           {/* Aadhaar Upload */}
-          <label className="
-            inline-flex items-center gap-1.5 px-3 py-1.5
-            border border-dashed border-accent text-accent-dark
-            rounded-sm text-2xs font-medium cursor-pointer
-            hover:bg-accent-bg hover:-translate-y-px
-            transition-all duration-200
-          ">
+          <label className="btn-aadhaar-upload">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="2" width="20" height="20" rx="5" />
               <circle cx="12" cy="10" r="3" />
               <path d="M7 20v-1a5 5 0 0 1 10 0v1" />
             </svg>
-            Scan Aadhaar
+            <span>Scan Aadhaar</span>
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
               capture="environment"
-              className="hidden"
+              style={{ display: 'none' }}
               onChange={handleFileChange}
             />
           </label>
@@ -87,11 +81,7 @@ export function PartnerCard({
           {canRemove && (
             <button
               onClick={() => onRemove(index)}
-              className="
-                w-8 h-8 flex items-center justify-center
-                border border-red-200 text-red-600 rounded-sm
-                hover:bg-red-50 transition-all duration-200
-              "
+              className="btn-remove-partner"
               title="Remove partner"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,58 +94,45 @@ export function PartnerCard({
       </div>
 
       {/* OCR Status */}
-      {ocrScanning && (
-        <div className="flex items-center gap-2 mb-3 text-[0.82rem] text-accent-dark">
-          <span className="w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" />
-          Scanning with AI...
-        </div>
-      )}
-      {ocrDone && !ocrScanning && (
-        <div className="flex items-center gap-2 mb-3 text-2xs text-green-600">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          Aadhaar data extracted. Image was not stored.
-        </div>
-      )}
+      <div className="aadhaar-ocr-status">
+        {ocrScanning && (
+          <div className="ocr-progress">
+            <span className="spinner-small" />
+            Scanning with AI...
+          </div>
+        )}
+        {ocrDone && !ocrScanning && (
+          <div className="aadhaar-privacy-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Aadhaar data extracted. Image was not stored.
+          </div>
+        )}
+      </div>
 
       {/* Form Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="form-grid">
         {/* Name */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[0.82rem] font-medium text-navy-800">
-            Full Name <span className="text-red-600">*</span>
+        <div className={`field${nameError ? ' error' : ''}`}>
+          <label>
+            Full Name <span className="req">*</span>
           </label>
           <input
             type="text"
             value={partner.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="Full name as on Aadhaar"
-            className={`
-              w-full px-4 py-3 border rounded-sm text-sm min-h-[44px]
-              bg-white text-navy-800 placeholder:text-navy-400
-              focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-              transition-all duration-200
-              ${nameError ? 'border-red-600 ring-[3px] ring-red-600/10' : 'border-navy-200'}
-            `}
           />
-          {nameError && <p className="text-2xs text-red-600">{nameError}</p>}
+          {nameError && <p className="field-error-msg">{nameError}</p>}
         </div>
 
         {/* Relation */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[0.82rem] font-medium text-navy-800">Relation</label>
+        <div className="field">
+          <label>Relation</label>
           <select
             value={partner.relation}
             onChange={(e) => handleChange('relation', e.target.value)}
-            className="
-              w-full px-4 py-3 border border-navy-200 rounded-sm text-sm min-h-[44px]
-              bg-white text-navy-800 appearance-none
-              focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-              transition-all duration-200
-              bg-[url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E&quot;)]
-              bg-[position:right_0.75rem_center] bg-[size:1.25rem] pr-9
-            "
           >
             <option value="S/O">S/O (Son of)</option>
             <option value="D/O">D/O (Daughter of)</option>
@@ -164,27 +141,19 @@ export function PartnerCard({
         </div>
 
         {/* Father's Name */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[0.82rem] font-medium text-navy-800">
-            {"Father's / Husband's Name"}
-          </label>
+        <div className="field">
+          <label>{"Father's / Husband's Name"}</label>
           <input
             type="text"
             value={partner.fatherName}
             onChange={(e) => handleChange('fatherName', e.target.value)}
             placeholder="Father's or Husband's name"
-            className="
-              w-full px-4 py-3 border border-navy-200 rounded-sm text-sm min-h-[44px]
-              bg-white text-navy-800 placeholder:text-navy-400
-              focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-              transition-all duration-200
-            "
           />
         </div>
 
         {/* Age */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[0.82rem] font-medium text-navy-800">Age</label>
+        <div className="field">
+          <label>Age</label>
           <input
             type="number"
             value={partner.age}
@@ -192,29 +161,17 @@ export function PartnerCard({
             placeholder="18"
             min={18}
             max={120}
-            className="
-              w-full px-4 py-3 border border-navy-200 rounded-sm text-sm min-h-[44px]
-              bg-white text-navy-800 placeholder:text-navy-400
-              focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-              transition-all duration-200
-            "
           />
         </div>
 
         {/* Address — full width */}
-        <div className="flex flex-col gap-1.5 col-span-full">
-          <label className="text-[0.82rem] font-medium text-navy-800">Address</label>
+        <div className="field full-width">
+          <label>Address</label>
           <textarea
             value={partner.address}
             onChange={(e) => handleChange('address', e.target.value)}
             placeholder="Full residential address"
             rows={2}
-            className="
-              w-full px-4 py-3 border border-navy-200 rounded-sm text-sm
-              bg-white text-navy-800 placeholder:text-navy-400
-              focus:border-accent focus:ring-[3px] focus:ring-accent/15 focus:outline-none
-              transition-all duration-200 resize-y min-h-[60px]
-            "
           />
         </div>
       </div>
