@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     .from("networth_payments")
     .select("id")
     .eq("certificate_id", certificateId)
+    .eq("user_id", user.id)
     .eq("status", "paid")
     .maybeSingle();
 

@@ -4,6 +4,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useWizardStore } from '../hooks/useWizardStore';
 import { useGenerate } from '../hooks/useGenerate';
 import { escapeHTML, fmtDate, safeNumber } from '../lib/utils';
@@ -398,7 +399,7 @@ function DeedPreview() {
         style={{ marginTop: 'var(--space-4)', padding: 'var(--space-6)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', maxHeight: '600px', overflowY: 'auto', fontSize: 'var(--text-base)', color: 'var(--text-main)', lineHeight: '1.7' }}
         contentEditable
         suppressContentEditableWarning
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
       />
     </details>
   );

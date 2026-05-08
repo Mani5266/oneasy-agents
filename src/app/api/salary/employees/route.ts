@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSupabaseClient } from "@/features/salary/lib/services/supabase";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET() {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const client = await getSupabaseClient();
     if (!client) {
@@ -31,6 +35,9 @@ function sanitizeEmployeeData(body: Record<string, unknown>) {
 }
 
 export async function POST(request: Request) {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const client = await getSupabaseClient();
     const body = await request.json();
@@ -56,6 +63,9 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const client = await getSupabaseClient();
     const body = await request.json();
@@ -87,6 +97,9 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const client = await getSupabaseClient();
     const { searchParams } = new URL(request.url);

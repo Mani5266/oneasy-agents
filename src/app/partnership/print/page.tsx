@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import DOMPurify from 'dompurify';
 import { useSearchParams } from 'next/navigation';
 import { dbGetDeedById } from '@/features/partnership/lib/db';
 import { escapeHTML, fmtDate, safeNumber } from '@/features/partnership/lib/utils';
@@ -413,7 +414,7 @@ function PrintPageInner() {
       {/* Deed content */}
       <div
         className="print-content"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
       />
     </>
   );

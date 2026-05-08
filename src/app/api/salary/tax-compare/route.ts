@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { compareTaxRegimes } from "@/features/salary/lib/engine/statutory";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function POST(request: Request) {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const body = await request.json();
     const {

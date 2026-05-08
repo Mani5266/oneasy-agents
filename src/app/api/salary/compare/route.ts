@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { calculateSalary, breakdownToResponse } from "@/features/salary/lib/engine/salary-calculator";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function POST(request: Request) {
+  const { user, error: authError } = await requireAuth();
+  if (!user) return authError;
+
   try {
     const body = await request.json();
     const { current_ctc, new_ctc, state = "default" } = body;

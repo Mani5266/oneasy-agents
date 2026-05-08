@@ -125,6 +125,17 @@ export default function DashboardClient({ user, stats }: Props) {
   )
 
   const handleLogout = async () => {
+    // Clear sensitive data from localStorage
+    try {
+      localStorage.removeItem('networth_current_step')
+      localStorage.removeItem('networth_chat_map')
+      localStorage.removeItem('networth_current_id')
+      localStorage.removeItem('networth_resume_data')
+      localStorage.removeItem('networth_resume_id')
+      localStorage.removeItem('networth_view_only')
+      localStorage.removeItem('oneasy_draft')
+      localStorage.removeItem('payslip_history')
+    } catch {}
     await supabase?.auth.signOut()
     router.push('/login')
   }
