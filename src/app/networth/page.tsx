@@ -481,13 +481,24 @@ function WizardShell() {
     }
   }, [step, certificateId]);
 
-  // Razorpay payment flow
+   // Razorpay payment flow
   const handlePayment = useCallback(async (onSuccess: () => void) => {
     if (isPaid) { onSuccess(); return; }
     if (!certificateId) { toast("Save the certificate first", "error"); return; }
 
     setPaymentLoading(true);
     try {
+      // Ensure Razorpay script is loaded
+      if (!(window as any).Razorpay) {
+        await new Promise<void>((resolve) => {
+          const s = document.createElement("script");
+          s.src = "https://checkout.razorpay.com/v1/checkout.js";
+          s.onload = () => resolve();
+          s.onerror = () => resolve();
+          document.head.appendChild(s);
+        });
+      }
+
       const res = await fetch("/api/networth/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
