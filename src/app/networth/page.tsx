@@ -472,7 +472,7 @@ function WizardShell() {
   // Check payment status when certificate changes or step reaches preview
   useEffect(() => {
     if (step === 7 && certificateId) {
-      fetch(`/api/check-payment?certificateId=${certificateId}`)
+      fetch(`/api/networth/check-payment?certificateId=${certificateId}`)
         .then(async (res) => {
           const d = await res.json();
           if (d.paid) setIsPaid(true);
@@ -488,7 +488,7 @@ function WizardShell() {
 
     setPaymentLoading(true);
     try {
-      const res = await fetch("/api/create-order", {
+      const res = await fetch("/api/networth/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ certificateId }),
@@ -517,7 +517,7 @@ function WizardShell() {
         order_id: orderData.orderId,
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           // Verify payment on server
-          const verifyRes = await fetch("/api/verify-payment", {
+          const verifyRes = await fetch("/api/networth/verify-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(response),
