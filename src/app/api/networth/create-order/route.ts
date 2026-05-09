@@ -44,9 +44,11 @@ export async function POST(request: NextRequest) {
   // Check if already paid
   const admin = createSupabaseAdminClient();
   const { data: existingPayment } = await admin
-    .from("networth_payments")
+    .from("payments")
     .select("id")
-    .eq("certificate_id", body.certificateId)
+    .eq("agent", "networth")
+    .eq("document_id", body.certificateId)
+    .eq("user_id", user.id)
     .eq("status", "paid")
     .maybeSingle();
 
@@ -84,9 +86,10 @@ export async function POST(request: NextRequest) {
 
   // Insert payment record
   await Promise.resolve(
-    admin.from("networth_payments").insert({
+    admin.from("payments").insert({
       user_id: user.id,
-      certificate_id: body.certificateId,
+      agent: "networth",
+      document_id: body.certificateId,
       razorpay_order_id: order.id,
       amount: AMOUNT_PAISE,
       currency: "INR",

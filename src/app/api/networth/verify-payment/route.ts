@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   // Update payment record
   const admin = createSupabaseAdminClient();
   const { error } = await admin
-    .from("networth_payments")
+    .from("payments")
     .update({
       razorpay_payment_id,
       razorpay_signature,

@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
 
   const admin = createSupabaseAdminClient();
   const { data: payment } = await admin
-    .from("networth_payments")
+    .from("payments")
     .select("id")
-    .eq("certificate_id", certificateId)
+    .eq("agent", "networth")
+    .eq("document_id", certificateId)
     .eq("user_id", user.id)
     .eq("status", "paid")
     .maybeSingle();
