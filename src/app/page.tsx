@@ -1,41 +1,6 @@
-'use client'
-
-import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { Shield, FileText, Calculator, Users, Briefcase, ChevronRight, Menu, X, Check, Star, ArrowRight, Zap, Clock, Lock, BarChart3 } from 'lucide-react'
-
-/* ─── Intersection Observer Hook ─── */
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('revealed')
-            // Also reveal staggered children
-            const children = entry.target.querySelectorAll('.reveal')
-            children.forEach((child, i) => {
-              ;(child as HTMLElement).style.setProperty('--i', String(i))
-              setTimeout(() => child.classList.add('revealed'), i * 100)
-            })
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  return ref
-}
+import { Shield, FileText, Calculator, Users, Briefcase, ChevronRight, Check, Star, ArrowRight, Zap, Clock, Lock, BarChart3 } from 'lucide-react'
+import { Navbar, RevealSection } from './components/LandingInteractive'
 
 /* ─── Data ─── */
 const agents = [
@@ -87,84 +52,12 @@ const whyChooseUs = [
   { icon: Star, title: 'Transparent Pricing', desc: 'No hidden fees. Pay only for what you use with clear, upfront pricing.' },
 ]
 
-/* ─── Component ─── */
+/* ─── Server Component ─── */
 export default function LandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-
-  const servicesRef = useReveal()
-  const whyUsRef = useReveal()
-  const aboutRef = useReveal()
-  const ctaRef = useReveal()
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ fontFamily: 'var(--font-inter)' }}>
-      {/* ─── NAVBAR ─── */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled ? 'bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/10' : 'bg-gradient-to-r from-black/40 via-slate-900/40 to-black/40 backdrop-blur-md'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-1 group">
-              <span className="text-2xl font-bold tracking-tight transition-transform duration-300 group-hover:scale-105" style={{ fontFamily: 'var(--font-dm-serif)' }}>
-                <span className="text-white">On</span>
-                <span className="text-[#C80009]">E</span>
-                <span className="text-white">asy</span>
-              </span>
-            </Link>
-
-            <div className="hidden md:flex items-center gap-8">
-              {['Services', 'Why Us', 'About'].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(' ', '-')}`}
-                  className="relative text-sm font-medium text-white/70 hover:text-white transition-colors duration-300 group"
-                >
-                  {item}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#C80009] group-hover:w-full transition-all duration-400 ease-out" />
-                </a>
-              ))}
-            </div>
-
-            <div className="hidden md:flex items-center gap-3">
-              <Link href="/login" className="px-5 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-300">
-                Login
-              </Link>
-              <Link
-                href="/login?mode=signup"
-                className="btn-press px-5 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-red-900/30"
-                style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}
-              >
-                Get Started
-              </Link>
-            </div>
-
-            <button className="md:hidden text-white p-1" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 px-6 py-4 space-y-3 animate-fade-in-up">
-            {['Services', 'Why Us', 'About'].map((item) => (
-              <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`} className="block text-white/80 hover:text-white text-sm font-medium py-2" onClick={() => setMobileMenuOpen(false)}>
-                {item}
-              </a>
-            ))}
-            <div className="pt-3 border-t border-white/10 flex gap-3">
-              <Link href="/login" className="flex-1 text-center py-2.5 text-sm text-white border border-white/30 rounded-lg">Login</Link>
-              <Link href="/login?mode=signup" className="flex-1 text-center py-2.5 text-sm text-white rounded-lg" style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}>Sign Up</Link>
-            </div>
-          </div>
-        )}
-      </nav>
+      {/* ─── NAVBAR (client component) ─── */}
+      <Navbar />
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -230,7 +123,7 @@ export default function LandingPage() {
 
       {/* ─── SERVICES / AGENTS ─── */}
       <section id="services" className="py-20 sm:py-28 bg-white">
-        <div ref={servicesRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
+        <RevealSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
           <div className="text-center mb-16">
             <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[#C80009] mb-3">Our AI Agents</span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0A2640] mb-4" style={{ fontFamily: 'var(--font-dm-serif)' }}>
@@ -274,12 +167,12 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </RevealSection>
       </section>
 
       {/* ─── WHY CHOOSE US ─── */}
       <section id="why-us" className="py-20 sm:py-28" style={{ background: 'linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%)' }}>
-        <div ref={whyUsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
+        <RevealSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
           <div className="text-center mb-16">
             <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[#C80009] mb-3">Excellence</span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#0A2640] mb-4" style={{ fontFamily: 'var(--font-dm-serif)' }}>
@@ -307,12 +200,12 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </RevealSection>
       </section>
 
       {/* ─── ABOUT / MISSION ─── */}
       <section id="about" className="py-20 sm:py-28 bg-white">
-        <div ref={aboutRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
+        <RevealSection className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal reveal-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <span className="inline-block text-xs font-bold tracking-[0.2em] uppercase text-[#C80009] mb-3">About OnEasy</span>
@@ -365,7 +258,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </RevealSection>
       </section>
 
       {/* ─── CTA SECTION ─── */}
@@ -377,7 +270,7 @@ export default function LandingPage() {
         }} />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full blur-[100px] glow-pulse" style={{ background: 'radial-gradient(circle, #C80009, transparent)' }} />
 
-        <div ref={ctaRef} className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal reveal-scale">
+        <RevealSection className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal reveal-scale">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6" style={{ fontFamily: 'var(--font-dm-serif)' }}>
             Ready to transform how you<br className="hidden sm:block" /> create business documents?
           </h2>
@@ -391,7 +284,7 @@ export default function LandingPage() {
           >
             Get Started Free <ArrowRight size={18} />
           </Link>
-        </div>
+        </RevealSection>
       </section>
 
       {/* ─── FOOTER ─── */}

@@ -1,29 +1,19 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Serif_Display, Inter, JetBrains_Mono } from "next/font/google";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import "./globals.css";
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
-});
 
 const dmSerif = DM_Serif_Display({
   subsets: ["latin"],
   weight: ["400"],
   variable: "--font-dm-serif",
+  display: "swap",
 });
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-inter",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full ${dmSans.variable} ${dmSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`h-full ${dmSerif.variable} ${inter.variable}`}>
       <body className="h-full antialiased">
         {children}
       </body>

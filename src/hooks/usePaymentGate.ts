@@ -60,8 +60,7 @@ export function usePaymentGate({ agent, documentId }: UsePaymentGateOptions): Us
     checkedRef.current = null;
   }, [documentId]);
 
-  // Load Razorpay script on mount
-  useEffect(() => { ensureRazorpayScript(); }, []);
+  // Razorpay script loaded on-demand when payment is triggered (not eagerly)
 
   const requirePayment = useCallback(async (onSuccess: () => void) => {
     if (isPaid) { onSuccess(); return; }
