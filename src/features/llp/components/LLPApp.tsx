@@ -208,10 +208,14 @@ export default function LLPApp() {
           pct={getPct(data)} 
           missing={getMissing(data)} 
           isManual={!!data.manualHtml}
-          onDocx={() => requirePayment(() => { dlDocx(); })} 
-          onPDF={() => requirePayment(() => { dlPDF(); })}
+          onDocx={() => dlDocx()} 
+          onPDF={() => dlPDF()}
           onSaveHtml={handleSaveHtml}
           onResetHtml={handleResetHtml}
+          isPaid={isPaid}
+          paymentLoading={paymentLoading}
+          onUnlock={() => requirePayment(() => {})}
+          hasDocumentId={!!sessionId}
         />
       </div>
 

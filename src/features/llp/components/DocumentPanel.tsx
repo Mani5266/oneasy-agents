@@ -25,9 +25,13 @@ interface Props {
   onPDF: () => Promise<void>;
   onSaveHtml?: (html: string) => void;
   onResetHtml?: () => void;
+  isPaid?: boolean;
+  paymentLoading?: boolean;
+  onUnlock?: () => void;
+  hasDocumentId?: boolean;
 }
 
-export default function DocumentPanel({ html, pct, missing, isManual, onDocx, onPDF, onSaveHtml, onResetHtml }: Props) {
+export default function DocumentPanel({ html, pct, missing, isManual, onDocx, onPDF, onSaveHtml, onResetHtml, isPaid, paymentLoading, onUnlock, hasDocumentId }: Props) {
   const [docxBusy, setDocxBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -145,23 +149,62 @@ export default function DocumentPanel({ html, pct, missing, isManual, onDocx, on
             {copied ? "Copied" : "Copy"}
           </button>
 
-          <button
-            onClick={dlPDF} disabled={pdfBusy}
-            className="doc-btn-pdf"
-            style={{ opacity: pdfBusy ? 0.6 : 1 }}
-          >
-            <FileDown size={13} />
-            {pdfBusy ? "..." : "PDF"}
-          </button>
+          {/* Payment Gate: Unlock or Download buttons */}
+          {onUnlock && !isPaid ? (
+            <button
+              onClick={onUnlock}
+              disabled={paymentLoading || !hasDocumentId}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '7px 18px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)', color: '#fff',
+                fontWeight: 700, fontSize: '12px',
+                boxShadow: '0 4px 14px rgba(30,58,95,0.25)',
+                transition: 'all 0.2s', opacity: paymentLoading || !hasDocumentId ? 0.5 : 1,
+              }}
+            >
+              {paymentLoading ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  Unlock
+                  <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', fontSize: '10px', fontWeight: 800 }}>&#8377;199</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <>
+              {isPaid && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  padding: '5px 12px', fontSize: '11px', fontWeight: 700,
+                  color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '9999px',
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  Paid
+                </span>
+              )}
 
-          <button
-            onClick={dlDocx} disabled={docxBusy}
-            className="doc-btn-docx"
-            style={{ opacity: docxBusy ? 0.6 : 1 }}
-          >
-            <Download size={13} />
-            {docxBusy ? "..." : "DOCX"}
-          </button>
+              <button
+                onClick={dlPDF} disabled={pdfBusy}
+                className="doc-btn-pdf"
+                style={{ opacity: pdfBusy ? 0.6 : 1 }}
+              >
+                <FileDown size={13} />
+                {pdfBusy ? "..." : "PDF"}
+              </button>
+
+              <button
+                onClick={dlDocx} disabled={docxBusy}
+                className="doc-btn-docx"
+                style={{ opacity: docxBusy ? 0.6 : 1 }}
+              >
+                <Download size={13} />
+                {docxBusy ? "..." : "DOCX"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

@@ -414,20 +414,51 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
   const { loading, error, showPdfBtn, generate, openPrintView } = useGenerate();
   const isGenerating = useWizardStore((s) => s.isGenerating);
   const currentDeedId = useWizardStore((s) => s.currentDeedId);
-  const { requirePayment, paymentLoading } = usePaymentGate({ agent: 'partnership', documentId: currentDeedId });
+  const { isPaid, requirePayment, paymentLoading } = usePaymentGate({ agent: 'partnership', documentId: currentDeedId });
 
-  const gatedGenerate = useCallback(() => {
-    // Generate first (saves + creates document), then gate the download via payment
-    // Since generate() both saves and downloads in one call, we gate the whole thing
-    requirePayment(() => { generate(); });
-  }, [requirePayment, generate]);
-
-  const gatedOpenPrintView = useCallback(() => {
-    requirePayment(() => { openPrintView(); });
-  }, [requirePayment, openPrintView]);
+  const handleUnlock = useCallback(() => {
+    requirePayment(() => {});
+  }, [requirePayment]);
 
   return (
     <div>
+      {/* Payment Gate Banner */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginBottom: 'var(--space-4)' }}>
+        {!isPaid ? (
+          <button
+            onClick={handleUnlock}
+            disabled={paymentLoading || !currentDeedId}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '10px 24px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)', color: '#fff',
+              fontWeight: 700, fontSize: '14px',
+              boxShadow: '0 4px 14px rgba(30,58,95,0.25)',
+              transition: 'all 0.2s', opacity: paymentLoading || !currentDeedId ? 0.5 : 1,
+            }}
+          >
+            {paymentLoading ? (
+              <><span className="spinner-small" /> Processing...</>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Unlock Document
+                <span style={{ padding: '2px 10px', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', fontSize: '12px', fontWeight: 800 }}>&#8377;199</span>
+              </>
+            )}
+          </button>
+        ) : (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '8px 16px', fontSize: '12px', fontWeight: 700,
+            color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '9999px',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+            Paid
+          </span>
+        )}
+      </div>
+
       {/* Review Grid */}
       <BuildReview />
 
@@ -450,34 +481,38 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
           Back
         </button>
 
-        <button
-          onClick={gatedGenerate}
-          disabled={loading || isGenerating || paymentLoading}
-          className="btn btn-gen"
-        >
-          {loading || isGenerating ? (
-            <><span className="spinner-small" /> Generating...</>
-          ) : (
-            <>
-              Generate & Download DOCX
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7,10 12,15 17,10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </>
-          )}
-        </button>
+        {isPaid && (
+          <>
+            <button
+              onClick={() => generate()}
+              disabled={loading || isGenerating}
+              className="btn btn-gen"
+            >
+              {loading || isGenerating ? (
+                <><span className="spinner-small" /> Generating...</>
+              ) : (
+                <>
+                  Generate & Download DOCX
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7,10 12,15 17,10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </>
+              )}
+            </button>
 
-        {showPdfBtn && (
-          <button onClick={gatedOpenPrintView} className="btn btn-pdf">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="6,9 6,2 18,2 18,9" />
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-              <rect x="6" y="14" width="12" height="8" />
-            </svg>
-            Save as PDF
-          </button>
+            {showPdfBtn && (
+              <button onClick={() => openPrintView()} className="btn btn-pdf">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6,9 6,2 18,2 18,9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                Save as PDF
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

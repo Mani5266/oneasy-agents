@@ -129,7 +129,7 @@ export default function OfferLetterApp() {
 
   const [currentPage, setCurrentPage] = useState<'generator' | 'history'>('generator');
   const [currentOfferId, setCurrentOfferId] = useState<string | null>(null);
-  const { requirePayment, paymentLoading } = usePaymentGate({ agent: 'offerletter', documentId: currentOfferId });
+  const { isPaid, requirePayment, paymentLoading } = usePaymentGate({ agent: 'offerletter', documentId: currentOfferId });
   const [offers, setOffers] = useState<OfferRecord[]>([]);
   const [sidebarDrafts, setSidebarDrafts] = useState<OfferRecord[]>([]);
   const [modalOffer, setModalOffer] = useState<OfferRecord | null>(null);
@@ -365,12 +365,7 @@ export default function OfferLetterApp() {
       setCurrentOfferId(saved.id);
       await fetchSidebarDrafts();
 
-      // Payment gate — require payment before generating document
-      const { requestPaymentForDocument } = await import('@/hooks/usePaymentGate');
-      const paid = await requestPaymentForDocument('offerletter', saved.id);
-      if (!paid) { setGenerating(false); return; }
-
-      // Generate DOCX
+      // Generate DOCX (payment already verified via unlock button)
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -516,6 +511,10 @@ export default function OfferLetterApp() {
               onGoToStep={goToStep}
               onGenerate={handleGenerate}
               onReset={handleReset}
+              isPaid={isPaid}
+              paymentLoading={paymentLoading}
+              onUnlock={() => requirePayment(() => {})}
+              hasDocumentId={!!currentOfferId}
             />
           ) : (
             <HistoryPage
@@ -610,7 +609,7 @@ function SidebarDraftItem({ offer, isActive, onSelect, onGenerate, onRename, onD
 }
 
 // ── Generator Page ──
-function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, onGoToStep, onGenerate, onReset }: {
+function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, onGoToStep, onGenerate, onReset, isPaid, paymentLoading, onUnlock, hasDocumentId }: {
   form: ReturnType<typeof useOfferForm>;
   ctcVal: number;
   salaryRows: ReturnType<typeof buildBreakdown>;
@@ -619,6 +618,10 @@ function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, on
   onGoToStep: (n: number) => void;
   onGenerate: () => void;
   onReset: () => void;
+  isPaid: boolean;
+  paymentLoading: boolean;
+  onUnlock: () => void;
+  hasDocumentId: boolean;
 }) {
   const step = form.currentStep;
   const d = form.formData;
@@ -842,9 +845,44 @@ function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, on
               <div className="gen-text">Generating your document...</div>
             </div>
           )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginBottom: '16px' }}>
+            {!isPaid ? (
+              <button
+                onClick={onUnlock}
+                disabled={paymentLoading || !hasDocumentId}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 24px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)', color: '#fff',
+                  fontWeight: 700, fontSize: '14px',
+                  boxShadow: '0 4px 14px rgba(30,58,95,0.25)',
+                  transition: 'all 0.2s', opacity: paymentLoading || !hasDocumentId ? 0.5 : 1,
+                }}
+              >
+                {paymentLoading ? (
+                  <>Processing...</>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    Unlock Document
+                    <span style={{ padding: '2px 10px', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', fontSize: '12px', fontWeight: 800 }}>&#8377;199</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', fontSize: '12px', fontWeight: 700,
+                color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '9999px',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                Paid
+              </span>
+            )}
+          </div>
           <div className="btn-row btn-row--centered">
             <button className="btn btn-back" onClick={() => onGoToStep(4)}>&larr; Back</button>
-            <button className="btn btn-gen" onClick={onGenerate} disabled={generating}>Generate DOCX</button>
+            {isPaid && <button className="btn btn-gen" onClick={onGenerate} disabled={generating}>Generate DOCX</button>}
           </div>
         </div>
       </div>
