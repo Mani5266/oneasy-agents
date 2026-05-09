@@ -81,7 +81,7 @@ export default function DocumentPanel({ html, pct, missing, isManual, onDocx, on
     <div className="doc-panel">
 
       {/* ── Header ── */}
-      <div className="doc-header">
+      <div className="doc-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 20px",background:"#ffffff",borderBottom:"1px solid #e0e5ed",flexShrink:0,gap:12,flexWrap:"wrap"}}>
         {/* Left */}
         <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
           <div className="doc-header-icon">
