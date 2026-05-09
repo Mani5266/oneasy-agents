@@ -20,6 +20,7 @@ interface AgentCard {
   accentColor: string
   accentGradient: string
   iconBg: string
+  comingSoon?: boolean
 }
 
 interface Props {
@@ -48,9 +49,9 @@ export default function DashboardClient({ user, stats }: Props) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
-      const routes = ['/networth', '/partnership', '/llp', '/offer-letter', '/salary']
+      const routes = ['/networth', '/partnership', '/llp', '/offer-letter', '']
       const num = parseInt(e.key)
-      if (num >= 1 && num <= 5) router.push(routes[num - 1])
+      if (num >= 1 && num <= 4) router.push(routes[num - 1])
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -116,6 +117,7 @@ export default function DashboardClient({ user, stats }: Props) {
       accentColor: '#ea580c',
       accentGradient: 'linear-gradient(135deg, #ea580c, #c2410c)',
       iconBg: '#fed7aa',
+      comingSoon: true,
     },
   ]
 
@@ -231,18 +233,29 @@ export default function DashboardClient({ user, stats }: Props) {
           {filteredAgents.map((agent, i) => (
             <button
               key={agent.id}
-              onClick={() => router.push(agent.href)}
+              onClick={() => !agent.comingSoon && router.push(agent.href)}
               onMouseMove={(e) => handleMouseMove(e, agent.id)}
               onMouseLeave={() => setHoveredCard(null)}
-              className="group relative text-left rounded-2xl border hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5 transition-all duration-300 overflow-hidden"
+              className={`group relative text-left rounded-2xl border transition-all duration-300 overflow-hidden ${
+                agent.comingSoon
+                  ? 'cursor-not-allowed opacity-75'
+                  : 'hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5'
+              }`}
               style={{
-                borderColor: '#EEEEEE',
+                borderColor: agent.comingSoon ? '#ea580c40' : '#EEEEEE',
                 background: '#FFFFFF',
-                opacity: mounted ? 1 : 0,
+                opacity: mounted ? (agent.comingSoon ? 0.75 : 1) : 0,
                 transform: mounted ? 'translateY(0)' : 'translateY(20px)',
                 transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${0.25 + i * 0.06}s`,
               }}
             >
+              {/* Coming Soon badge */}
+              {agent.comingSoon && (
+                <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white animate-pulse"
+                  style={{ background: 'linear-gradient(135deg, #ea580c, #c2410c)' }}>
+                  Coming Soon
+                </div>
+              )}
               {/* Colored header band */}
               <div
                 className="relative px-6 pt-6 pb-5 transition-all duration-300"
@@ -295,7 +308,12 @@ export default function DashboardClient({ user, stats }: Props) {
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: '#F3F3F3' }}>
-                  {agent.stat > 0 ? (
+                  {agent.comingSoon ? (
+                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: '#ea580c' }}>
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#ea580c' }} />
+                      In Progress
+                    </span>
+                  ) : agent.stat > 0 ? (
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: '#646464' }}>
                       <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: agent.accentColor }} />
                       {agent.stat} {agent.statLabel}
@@ -305,9 +323,11 @@ export default function DashboardClient({ user, stats }: Props) {
                       Get started
                     </span>
                   )}
-                  <span className="text-[12px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ color: agent.accentColor }}>
-                    Open
-                  </span>
+                  {!agent.comingSoon && (
+                    <span className="text-[12px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ color: agent.accentColor }}>
+                      Open
+                    </span>
+                  )}
                 </div>
               </div>
             </button>
