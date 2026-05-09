@@ -198,7 +198,8 @@ export default function LLPApp() {
         <ChatPanel data={data} step={step} done={done} pct={getPct(data)} sessionId={sessionId}
           onUpdates={applyUpdates} onStep={setStep} onDone={()=>setDone(true)} onRestart={restart}
           onRestore={(d, s, dn) => { setData(d); setStep(s); setDone(dn); }}
-          onBackToDashboard={() => router.push("/dashboard")} />
+          onBackToDashboard={() => router.push("/dashboard")}
+          onHistory={() => router.push("/llp/history")} />
       </div>
       <div style={{display: mobileTab === "preview" ? "flex" : undefined, flexDirection:"column", height:"100%", overflow:"hidden"}}
            className={mobileTab !== "preview" ? "mobile-hide" : ""}
