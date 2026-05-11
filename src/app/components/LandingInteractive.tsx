@@ -3,16 +3,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 /* ─── Scroll-aware Navbar (client) ─── */
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data }: { data: { session: unknown } }) => {
+      setLoggedIn(!!data.session)
+    })
   }, [])
 
   return (
@@ -43,16 +51,28 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="px-5 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-300">
-              Login
-            </Link>
-            <Link
-              href="/login?mode=signup"
-              className="btn-press px-5 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-red-900/30"
-              style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}
-            >
-              Get Started
-            </Link>
+            {loggedIn ? (
+              <Link
+                href="/dashboard"
+                className="btn-press px-5 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-red-900/30"
+                style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-5 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-300">
+                  Login
+                </Link>
+                <Link
+                  href="/login?mode=signup"
+                  className="btn-press px-5 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-red-900/30"
+                  style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           <button className="md:hidden text-white p-1" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -69,8 +89,14 @@ export function Navbar() {
             </a>
           ))}
           <div className="pt-3 border-t border-white/10 flex gap-3">
-            <Link href="/login" className="flex-1 text-center py-2.5 text-sm text-white border border-white/30 rounded-lg">Login</Link>
-            <Link href="/login?mode=signup" className="flex-1 text-center py-2.5 text-sm text-white rounded-lg" style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }}>Sign Up</Link>
+            {loggedIn ? (
+              <Link href="/dashboard" className="flex-1 text-center py-2.5 text-sm text-white rounded-lg" style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }} onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/login" className="flex-1 text-center py-2.5 text-sm text-white border border-white/30 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Login</Link>
+                <Link href="/login?mode=signup" className="flex-1 text-center py-2.5 text-sm text-white rounded-lg" style={{ background: 'linear-gradient(180deg, #C80009 0%, #620004 100%)' }} onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
+              </>
+            )}
           </div>
         </div>
       )}
