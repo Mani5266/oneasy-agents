@@ -269,26 +269,7 @@ export function Sidebar({
           </Link>
         </div>
 
-        <button
-          onClick={async () => {
-            try {
-              localStorage.removeItem('networth_current_step');
-              localStorage.removeItem('networth_chat_map');
-              localStorage.removeItem('networth_current_id');
-              localStorage.removeItem('networth_resume_data');
-              localStorage.removeItem('networth_resume_id');
-              localStorage.removeItem('networth_view_only');
-            } catch {}
-            await supabase.auth.signOut();
-            router.push("/login");
-          }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium
-            text-slate-400 hover:text-red-400 hover:bg-red-500/10
-            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </button>
+
       </div>
 
       {/* Delete Confirmation Modal */}

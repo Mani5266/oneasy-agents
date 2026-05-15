@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Shield, FileText, Calculator, Users, Briefcase, ChevronRight, Check, Star, ArrowRight, Zap, Clock, Lock, BarChart3 } from 'lucide-react'
 import { Navbar, RevealSection } from './components/LandingInteractive'
+import { createClient } from '@/lib/supabase/server'
 
 /* ─── Data ─── */
 const agents = [
@@ -53,11 +54,18 @@ const whyChooseUs = [
 ]
 
 /* ─── Server Component ─── */
-export default function LandingPage() {
+export default async function LandingPage() {
+  let loggedIn = false;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    loggedIn = !!data.user;
+  } catch {}
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ fontFamily: 'var(--font-inter)' }}>
       {/* ─── NAVBAR (client component) ─── */}
-      <Navbar />
+      <Navbar loggedIn={loggedIn} />
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">

@@ -258,8 +258,8 @@ export function ChatPanel({
       {/* Header */}
       <div className="chat-panel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2">
-            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
           </svg>
           <h2 className="chat-panel-title">AI Assistant</h2>
           {extractedCount > 0 && (
@@ -279,16 +279,8 @@ export function ChatPanel({
       {/* Messages */}
       <div className="chat-messages">
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 'var(--space-8) 0' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" style={{ margin: '0 auto var(--space-3)', opacity: 0.4 }}>
-              <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
-            </svg>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Hi! I can help you fill in your partnership deed.
-            </p>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-light)', marginTop: 'var(--space-1)' }}>
-              Tell me about your business and partners, and I&apos;ll fill the form for you.
-            </p>
+          <div className="chat-message assistant">
+            Hello! I&apos;ll help you fill in your partnership deed. Let&apos;s start — tell me about your business and partners (e.g. names, addresses, business name, capital contributions, etc.)
           </div>
         )}
 

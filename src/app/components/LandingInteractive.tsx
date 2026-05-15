@@ -1,26 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 /* ─── Scroll-aware Navbar (client) ─── */
-export function Navbar() {
+export function Navbar({ loggedIn = false }: { loggedIn?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  useEffect(() => {
-    createClient().auth.getSession().then(({ data }: { data: { session: unknown } }) => {
-      setLoggedIn(!!data.session)
-    })
   }, [])
 
   return (

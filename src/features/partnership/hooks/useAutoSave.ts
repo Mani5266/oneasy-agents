@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useWizardStore } from './useWizardStore';
 import { dbSaveDeed } from '../lib/db';
 
@@ -15,6 +15,7 @@ interface UseAutoSaveOptions {
 export function useAutoSave(options?: UseAutoSaveOptions) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   const debouncedSave = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -29,6 +30,7 @@ export function useAutoSave(options?: UseAutoSaveOptions) {
       if (!hasName && !hasPartnerNames && !state.currentDeedId) return;
 
       savingRef.current = true;
+      setSaving(true);
       try {
         const saved = await dbSaveDeed({
           id: state.currentDeedId,
@@ -48,6 +50,7 @@ export function useAutoSave(options?: UseAutoSaveOptions) {
         console.warn('[AutoSave] Server save failed:', err);
       } finally {
         savingRef.current = false;
+        setSaving(false);
       }
     }, SAVE_DEBOUNCE_MS);
   }, [options]);
@@ -92,5 +95,5 @@ export function useAutoSave(options?: UseAutoSaveOptions) {
     }
   }, []);
 
-  return { saveNow };
+  return { saveNow, saving };
 }

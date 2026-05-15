@@ -13,7 +13,6 @@ export const config = {
     '/llp/:path*',
     '/offer-letter/:path*',
     '/salary/:path*',
-    '/api/:path*',
     '/login',
   ],
 }

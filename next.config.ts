@@ -7,10 +7,19 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: [],
+  serverExternalPackages: [
+    "puppeteer-core",
+    "@sparticuz/chromium",
+    "tesseract.js",
+  ],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "wypoxvslvswcffapxiog.supabase.co" },
+    ],
+  },
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: "2mb",
     },
   },
 };

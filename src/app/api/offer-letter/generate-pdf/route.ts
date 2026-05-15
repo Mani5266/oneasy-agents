@@ -5,16 +5,16 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { html, candidateName } = await req.json();
+    const { html, empName } = await req.json();
 
     if (!html || typeof html !== "string") {
       return NextResponse.json({ error: "Missing html body" }, { status: 400 });
     }
 
-    const safeName = (candidateName || "").replace(/[^a-zA-Z0-9_\- ]/g, "").trim();
+    const safeName = (empName || "").replace(/[^a-zA-Z0-9_\- ]/g, "").trim();
     const filename = safeName
-      ? `NetWorth_Certificate - ${safeName}.pdf`
-      : "NetWorth_Certificate.pdf";
+      ? `Offer_Letter - ${safeName}.pdf`
+      : "Offer_Letter.pdf";
 
     const pdfBuffer = await generatePdfFromHtml(html);
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     resetBrowser();
-    console.error("[generate-pdf] Error:", error);
+    console.error("[offer-letter/generate-pdf] Error:", error);
     return NextResponse.json(
       { error: "PDF generation failed", details: String(error) },
       { status: 500 }

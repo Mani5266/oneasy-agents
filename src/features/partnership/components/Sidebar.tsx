@@ -6,6 +6,16 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useWizardStore } from '../hooks/useWizardStore';
 import type { Deed } from '../types';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Menu,
+  X,
+  History,
+  FileText,
+  Sparkles,
+} from 'lucide-react';
 
 interface SidebarProps {
   drafts: Deed[];
@@ -26,10 +36,11 @@ export function Sidebar({
   onToggleChat,
   chatOpen,
 }: SidebarProps) {
-  const { email, signOut } = useAuth();
+  const { email } = useAuth();
   const currentPage = useWizardStore((s) => s.currentPage);
   const currentDeedId = useWizardStore((s) => s.currentDeedId);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const handleNav = useCallback(
     (page: 'generator' | 'history') => {
@@ -52,180 +63,239 @@ export function Sidebar({
     setMobileOpen(false);
   }, [onNewDeed]);
 
-  const handleLogout = useCallback(async () => {
-    await signOut();
-    window.location.href = '/login';
-  }, [signOut]);
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      onDeleteDeed(deleteTarget);
+      setDeleteTarget(null);
+    }
+  };
+
+  const sidebarContent = (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-gold-500 rounded-2xl flex items-center justify-center text-navy-950 font-black text-lg shadow-lg shadow-gold-500/20">
+          O
+        </div>
+        <div>
+          <h1 className="text-xl font-extrabold text-white tracking-tight leading-tight">
+            OnEasy
+          </h1>
+          <p className="text-[11px] font-semibold text-gold-400 tracking-wide leading-tight">
+            Partnership Deed
+          </p>
+        </div>
+      </div>
+
+      {/* New Deed Button */}
+      <button
+        onClick={handleNewDeed}
+        className="w-full flex items-center justify-center gap-2 mb-3 py-3 px-4 rounded-xl font-semibold text-sm
+          text-navy-950 bg-white hover:bg-slate-100 shadow-md shadow-black/10
+          transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:ring-offset-2 focus:ring-offset-navy-900"
+      >
+        <Plus className="w-4 h-4" /> New Partnership Deed
+      </button>
+
+      {/* Fill with AI Button */}
+      <button
+        onClick={() => {
+          onToggleChat();
+          setMobileOpen(false);
+        }}
+        className="w-full flex items-center justify-center gap-2 mb-8 py-2.5 px-4 rounded-xl font-semibold text-sm
+          text-gold-400 bg-gold-500/10 hover:bg-gold-500/20 border border-gold-500/20
+          transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:ring-offset-2 focus:ring-offset-navy-900"
+      >
+        <Sparkles className="w-4 h-4" /> Fill with AI
+      </button>
+
+      {/* Draft List */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 px-1">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            Recent Drafts
+          </h2>
+        </div>
+
+        <div className="space-y-1.5">
+          {drafts.length === 0 ? (
+            <p className="text-xs text-center text-slate-500 py-8 italic">
+              No saved deeds yet. Create your first deed above.
+            </p>
+          ) : (
+            drafts.slice(0, 10).map((d) => (
+              <div
+                key={d.id}
+                className={`relative group w-full rounded-xl transition-all border ${
+                  d.id === currentDeedId
+                    ? 'bg-navy-800/60 border-gold-500/30 ring-1 ring-gold-500/20'
+                    : 'bg-transparent border-transparent hover:bg-navy-800/40 hover:border-navy-700/50'
+                }`}
+              >
+                <button
+                  onClick={() => handleDraftClick(d.id)}
+                  className="w-full text-left p-3 pr-16 flex items-start gap-2.5"
+                >
+                  <div
+                    className={`mt-0.5 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                      d.id === currentDeedId
+                        ? 'bg-gold-500/20 text-gold-400'
+                        : 'bg-navy-700/50 text-slate-500 group-hover:bg-navy-700 group-hover:text-slate-400'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-slate-200 line-clamp-1 group-hover:text-white transition-colors">
+                      {d.business_name || 'Untitled'}
+                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {d.updated_at ? new Date(d.updated_at).toLocaleDateString() : ''}
+                      </span>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded leading-none bg-gold-500/20 text-gold-400">
+                        DRAFT
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Action buttons on hover */}
+                <div className="absolute right-2 top-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDraftClick(d.id);
+                    }}
+                    className="p-1.5 text-slate-500 hover:text-gold-400 transition-colors rounded-md hover:bg-navy-700/50"
+                    aria-label="Edit deed"
+                    title="Edit"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(d.id);
+                    }}
+                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors rounded-md hover:bg-red-500/10"
+                    aria-label="Delete deed"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Bottom section */}
+      <div className="mt-auto pt-4 border-t border-navy-700/50">
+        {email && (
+          <p className="text-[11px] text-slate-500 truncate mb-3 px-1" title={email}>
+            {email}
+          </p>
+        )}
+
+        {/* Generator / History nav buttons */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => handleNav('generator')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              currentPage === 'generator'
+                ? 'text-white bg-navy-700/60'
+                : 'text-slate-400 hover:text-white hover:bg-navy-700/60'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Generator
+          </button>
+          <button
+            onClick={() => handleNav('history')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
+              currentPage === 'history'
+                ? 'text-white bg-navy-700/60'
+                : 'text-slate-400 hover:text-white hover:bg-navy-700/60'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            History
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-navy-950/60 backdrop-blur-sm">
+          <div className="bg-navy-900 border border-navy-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="text-white font-bold text-lg mb-2">Delete Deed</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Are you sure you want to delete this deed? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-navy-700/60 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <>
-      {/* Hamburger — mobile only */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className={`hamburger ${chatOpen ? 'hidden' : ''}`}
-        aria-label="Toggle menu"
-      >
-        <span /><span /><span />
-      </button>
+      {/* Mobile hamburger button */}
+      <div className="lg:hidden fixed top-4 left-4 z-40 no-print">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className={`p-2.5 bg-navy-900 border border-navy-700 rounded-xl shadow-md hover:bg-navy-800 transition-colors ${chatOpen ? 'hidden' : ''}`}
+          aria-label="Open sidebar menu"
+        >
+          <Menu className="w-5 h-5 text-white" />
+        </button>
+      </div>
 
-      {/* Mobile backdrop */}
+      {/* Mobile drawer overlay */}
       {mobileOpen && (
         <div
-          className="mobile-backdrop visible"
+          className="lg:hidden fixed inset-0 z-40 bg-navy-950/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-        {/* ── Top Section ── */}
-        <div className="sidebar-top">
-          {/* Logo */}
-          <div className="sidebar-logo">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <circle cx="20" cy="20" r="20" fill="#1e293b" />
-              <text
-                x="50%"
-                y="54%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#f0b929"
-                fontSize="22"
-                fontWeight="bold"
-                fontFamily="DM Serif Display, serif"
-              >
-                O
-              </text>
-            </svg>
-            <div className="sidebar-logo-text">
-              <span className="sidebar-brand">OnEasy</span>
-              <span className="sidebar-subtitle">Partnership Deed</span>
-            </div>
-          </div>
+      <aside
+        className={`
+          fixed lg:relative top-0 left-0 z-50 lg:z-auto
+          h-screen lg:h-full w-72 bg-navy-900 border-r border-navy-800 p-6 flex flex-col no-print
+          transition-transform duration-300 ease-in-out
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Mobile close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden absolute top-4 right-4 p-1.5 text-slate-500 hover:text-white transition-colors"
+          aria-label="Close sidebar menu"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-          {/* New Deed Button */}
-          <div className="sidebar-new-btn">
-            <button onClick={handleNewDeed} className="btn btn-accent btn-full">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="8" y1="2" x2="8" y2="14" />
-                <line x1="2" y1="8" x2="14" y2="8" />
-              </svg>
-              New Partnership Deed
-            </button>
-          </div>
-
-          {/* Fill with AI Button */}
-          <div className="sidebar-new-btn">
-            <button
-              onClick={() => {
-                onToggleChat();
-                setMobileOpen(false);
-              }}
-              className="btn btn-full"
-              style={{ color: 'var(--accent)', background: 'rgba(240,185,41,0.1)', border: '1px solid rgba(240,185,41,0.2)' }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-              </svg>
-              AI Chat Assistant
-            </button>
-          </div>
-
-          {/* Recent Drafts */}
-          <div className="sidebar-section-label">Recent Drafts</div>
-
-          <div className="draft-list">
-            {drafts.length === 0 ? (
-              <p className="draft-empty">No saved deeds yet...</p>
-            ) : (
-              drafts.map((d) => (
-                <div
-                  key={d.id}
-                  className={`draft-item ${d.id === currentDeedId ? 'active' : ''}`}
-                >
-                  <span
-                    className="draft-item-text"
-                    onClick={() => handleDraftClick(d.id)}
-                  >
-                    {d.business_name || 'Untitled'}
-                  </span>
-                  <div className="draft-item-actions">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDraftClick(d.id);
-                      }}
-                      className="draft-action-btn"
-                      title="Edit"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteDeed(d.id);
-                      }}
-                      className="draft-action-btn draft-delete-btn"
-                      title="Delete"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* ── Footer Section ── */}
-        <div className="sidebar-footer">
-          <div className="sidebar-divider" />
-
-          {/* Email */}
-          <div className="sidebar-email">{email}</div>
-
-          {/* Nav Buttons */}
-          <div className="sidebar-nav">
-            <button
-              onClick={() => handleNav('generator')}
-              className={`sidebar-nav-btn ${currentPage === 'generator' ? 'active' : ''}`}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-              Generator
-            </button>
-            <button
-              onClick={() => handleNav('history')}
-              className={`sidebar-nav-btn ${currentPage === 'history' ? 'active' : ''}`}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              History
-            </button>
-          </div>
-
-          {/* Logout */}
-          <button onClick={handleLogout} className="sidebar-logout-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Logout
-          </button>
-        </div>
+        {sidebarContent}
       </aside>
     </>
   );

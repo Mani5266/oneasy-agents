@@ -3,13 +3,14 @@
 
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { useWizardStore } from '../hooks/useWizardStore';
 import { useGenerate } from '../hooks/useGenerate';
 import { escapeHTML, fmtDate, safeNumber } from '../lib/utils';
 import { getPartyLabel } from '../types';
 import { usePaymentGate } from '@/hooks/usePaymentGate';
+import { buildPartnershipHtml } from '../lib/buildPartnershipHtml';
 
 interface Step3ReviewProps {
   onPrev: () => void;
@@ -411,10 +412,39 @@ function DeedPreview() {
 // ---------------------------------------------------------------------------
 
 export function Step3Review({ onPrev }: Step3ReviewProps) {
-  const { loading, error, showPdfBtn, generate, openPrintView } = useGenerate();
+  const { loading, error, showPdfBtn, generate } = useGenerate();
   const isGenerating = useWizardStore((s) => s.isGenerating);
   const currentDeedId = useWizardStore((s) => s.currentDeedId);
+  const businessName = useWizardStore((s) => s.businessName);
   const { isPaid, requirePayment, paymentLoading } = usePaymentGate({ agent: 'partnership', documentId: currentDeedId });
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const downloadPdf = useCallback(async () => {
+    const el = document.querySelector('.deed-preview-content');
+    if (!el) return;
+    const html = buildPartnershipHtml(el.innerHTML);
+    setPdfLoading(true);
+    try {
+      const res = await fetch('/api/partnership/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html, businessName }),
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const name = (businessName || '').trim();
+      a.download = name ? `Partnership_Deed - ${name}.pdf` : 'Partnership_Deed.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [businessName]);
 
   const handleUnlock = useCallback(() => {
     requirePayment(() => {});
@@ -503,13 +533,19 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
             </button>
 
             {showPdfBtn && (
-              <button onClick={() => openPrintView()} className="btn btn-pdf">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="6,9 6,2 18,2 18,9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                Save as PDF
+              <button onClick={downloadPdf} disabled={pdfLoading} className="btn btn-pdf">
+                {pdfLoading ? (
+                  <><span className="spinner-small" /> Generating PDF...</>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6,9 6,2 18,2 18,9" />
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                      <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Download PDF
+                  </>
+                )}
               </button>
             )}
           </>

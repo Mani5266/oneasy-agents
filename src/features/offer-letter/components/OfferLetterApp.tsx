@@ -9,6 +9,7 @@ import { fmtINR, toWords, formatCardDate, numberToWords } from '../lib/utils';
 import { OfferRecord, OfferPayload, FIELD_STEP_MAP } from '../types';
 import { createClient } from '@/lib/supabase/client';
 import { usePaymentGate } from '@/hooks/usePaymentGate';
+import { SaveIndicator } from '@/components/SaveIndicator';
 import { OfferChatPanel, ChatMessage } from './OfferChatPanel';
 
 // ── Toast Component ──
@@ -135,6 +136,7 @@ export default function OfferLetterApp() {
   const [sidebarDrafts, setSidebarDrafts] = useState<OfferRecord[]>([]);
   const [modalOffer, setModalOffer] = useState<OfferRecord | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingSidebar, setLoadingSidebar] = useState(false);
@@ -209,6 +211,7 @@ export default function OfferLetterApp() {
       const payload = form.getPayload();
       const empName = payload.empFullName || 'Untitled';
       if (!currentOfferId && empName === 'Untitled' && !payload.orgName && !payload.designation) return;
+      setSaving(true);
       try {
         const saved = await crud.saveOffer({
           id: currentOfferId,
@@ -224,6 +227,7 @@ export default function OfferLetterApp() {
         if (sidebarRefreshTimer.current) clearTimeout(sidebarRefreshTimer.current);
         sidebarRefreshTimer.current = setTimeout(() => fetchSidebarDrafts(), 3000);
       } catch (e) { console.error('Auto-save failed:', e); }
+      finally { setSaving(false); }
     }, 800);
   }, [form, currentOfferId, crud, fetchSidebarDrafts]);
 
@@ -416,6 +420,49 @@ export default function OfferLetterApp() {
     }
   }, [form, currentOfferId, crud, fetchSidebarDrafts, fetchOffers, currentPage, showToast]);
 
+  // ── Download PDF ──
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const handleDownloadPdf = useCallback(async () => {
+    const errs = form.validate();
+    if (errs) {
+      const fieldList = errs.map(e => e.label).join(', ');
+      showToast('error', `Please fill required fields: ${fieldList}`);
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      const payload = form.getPayload();
+      const empName = payload.empFullName || 'Untitled';
+      const { buildOfferLetterHtml } = await import('../lib/buildOfferLetterHtml');
+      const html = buildOfferLetterHtml(payload);
+
+      const res = await fetch('/api/offer-letter/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html, empName }),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || 'PDF generation failed');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Offer_Letter - ${empName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+      showToast('success', 'PDF downloaded!');
+    } catch (e: unknown) {
+      showToast('error', (e as Error).message || 'PDF generation failed');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [form, showToast]);
+
   // ── Sidebar rename ──
   const handleSidebarRename = useCallback(async (id: string, newName: string) => {
     try {
@@ -454,6 +501,15 @@ export default function OfferLetterApp() {
   // ── Render ──
   return (
     <div className="offer-letter-app">
+      {/* Back to Dashboard floating pill */}
+      <a
+        href="/dashboard"
+        className="ol-back-pill"
+        style={{ position: 'fixed', top: '1rem', left: '1rem', zIndex: 60, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 600, color: '#fff', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', textDecoration: 'none', transition: 'all 0.2s' }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Dashboard
+      </a>
       <div className="app-shell">
         {/* Mobile hamburger */}
         <button className={`mobile-hamburger${mobileMenuOpen ? ' open' : ''}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Open menu">
@@ -474,10 +530,15 @@ export default function OfferLetterApp() {
             <button className="sidebar-new-btn" onClick={handleReset}>
               <span className="sidebar-new-icon">+</span> New Offer Letter
             </button>
+            <button className="sidebar-ai-btn" onClick={() => setChatOpen(v => !v)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+              </svg>
+              Fill with AI
+            </button>
             <nav className="sidebar-section" aria-label="Recent offer letters">
               <div className="sidebar-section-header">
-                <span className="sidebar-section-title">RECENT OFFER LETTERS</span>
-                <button className="sidebar-view-all" onClick={() => switchPage('history')}>View All</button>
+                <span className="sidebar-section-title">RECENT DRAFTS</span>
               </div>
               <div className="sidebar-drafts">
                 {loadingSidebar && <div className="sidebar-empty sidebar-loading">Loading drafts&hellip;</div>}
@@ -540,9 +601,12 @@ export default function OfferLetterApp() {
               ctcVal={ctcVal}
               salaryRows={salaryRows}
               generating={generating}
+              generatingPdf={generatingPdf}
+              saving={saving}
               onFieldChange={handleFieldChange}
               onGoToStep={goToStep}
               onGenerate={handleGenerate}
+              onDownloadPdf={handleDownloadPdf}
               onReset={handleReset}
               isPaid={isPaid}
               paymentLoading={paymentLoading}
@@ -642,14 +706,17 @@ function SidebarDraftItem({ offer, isActive, onSelect, onGenerate, onRename, onD
 }
 
 // ── Generator Page ──
-function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, onGoToStep, onGenerate, onReset, isPaid, paymentLoading, onUnlock, hasDocumentId }: {
+function GeneratorPage({ form, ctcVal, salaryRows, generating, generatingPdf, saving, onFieldChange, onGoToStep, onGenerate, onDownloadPdf, onReset, isPaid, paymentLoading, onUnlock, hasDocumentId }: {
   form: ReturnType<typeof useOfferForm>;
   ctcVal: number;
   salaryRows: ReturnType<typeof buildBreakdown>;
   generating: boolean;
+  generatingPdf: boolean;
+  saving: boolean;
   onFieldChange: (id: string, value: string) => void;
   onGoToStep: (n: number) => void;
   onGenerate: () => void;
+  onDownloadPdf: () => void;
   onReset: () => void;
   isPaid: boolean;
   paymentLoading: boolean;
@@ -683,6 +750,7 @@ function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, on
               role="tab" aria-selected={i === step} onClick={() => onGoToStep(i)}>{label}</button>
           ))}
         </nav>
+        <SaveIndicator saving={saving} />
       </div>
       <div className="form-card">
         {/* Step 0: Company */}
@@ -878,44 +946,14 @@ function GeneratorPage({ form, ctcVal, salaryRows, generating, onFieldChange, on
               <div className="gen-text">Generating your document...</div>
             </div>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginBottom: '16px' }}>
-            {!isPaid ? (
-              <button
-                onClick={onUnlock}
-                disabled={paymentLoading || !hasDocumentId}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 24px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)', color: '#fff',
-                  fontWeight: 700, fontSize: '14px',
-                  boxShadow: '0 4px 14px rgba(30,58,95,0.25)',
-                  transition: 'all 0.2s', opacity: paymentLoading || !hasDocumentId ? 0.5 : 1,
-                }}
-              >
-                {paymentLoading ? (
-                  <>Processing...</>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    Unlock Document
-                    <span style={{ padding: '2px 10px', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', fontSize: '12px', fontWeight: 800 }}>&#8377;199</span>
-                  </>
-                )}
-              </button>
-            ) : (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '8px 16px', fontSize: '12px', fontWeight: 700,
-                color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '9999px',
-              }}>
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                Paid
-              </span>
-            )}
-          </div>
           <div className="btn-row btn-row--centered">
             <button className="btn btn-back" onClick={() => onGoToStep(4)}>&larr; Back</button>
-            {isPaid && <button className="btn btn-gen" onClick={onGenerate} disabled={generating}>Generate DOCX</button>}
+            <button className="btn btn-gen" onClick={onGenerate} disabled={generating}>
+              {generating ? <><span className="spinner-small" /> Generating...</> : <>Generate & Download DOCX <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display:'inline',verticalAlign:'middle',marginLeft:4}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></>}
+            </button>
+            <button className="btn btn-pdf" onClick={onDownloadPdf} disabled={generatingPdf}>
+              {generatingPdf ? <><span className="spinner-small" /> Generating PDF...</> : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{display:'inline',verticalAlign:'middle',marginRight:4}}><polyline points="6,9 6,2 18,2 18,9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Download PDF</>}
+            </button>
           </div>
         </div>
       </div>
