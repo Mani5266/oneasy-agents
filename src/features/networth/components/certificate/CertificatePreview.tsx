@@ -201,7 +201,7 @@ export const CertificatePreview = forwardRef<HTMLDivElement, CertificateProps>(
         ref={ref}
         className="print-full"
         style={{
-          fontFamily: "'Book Antiqua', Georgia, serif",
+          fontFamily: "'Times New Roman', Times, serif",
           fontSize: 13,
           color: "#111",
           lineHeight: 1.7,
@@ -211,14 +211,14 @@ export const CertificatePreview = forwardRef<HTMLDivElement, CertificateProps>(
           border: "1.5px solid #ccc",
         }}
       >
-        {/* ── Print top spacer (5 blank lines before heading) ── */}
+        {/* ── Print top spacer (6 blank lines before heading on first page) ── */}
         <div className="print-top-spacer" style={{ height: 0 }} />
 
         {/* ── Header ── */}
-        <p style={{ textAlign: "center", fontWeight: 700, fontSize: 16, margin: "0 0 4px" }}>
+        <p className="print-heading" style={{ textAlign: "center", fontWeight: 700, fontSize: 16, margin: "0 0 4px" }}>
           TO WHOMSOEVER IT MAY CONCERN
         </p>
-        <p style={{ textAlign: "center", fontWeight: 700, fontSize: 19, textDecoration: "underline", margin: "0 0 24px" }}>
+        <p className="print-heading" style={{ textAlign: "center", fontWeight: 700, fontSize: 19, margin: "0 0 24px" }}>
           NETWORTH CERTIFICATE
         </p>
 
@@ -330,7 +330,7 @@ export const CertificatePreview = forwardRef<HTMLDivElement, CertificateProps>(
         {/* ── ANNEXURE I ── */}
         <div className="print-annexure-group print-annexure-break">
         <p style={{ fontWeight: 700, margin: "0 0 6px" }}>
-          <strong>ANNEXURE-I&nbsp;&nbsp;&nbsp;&nbsp;CURRENT INCOME</strong>
+          <strong>ANNEXURE – I&nbsp;&nbsp;&nbsp;&nbsp;CURRENT INCOME</strong>
         </p>
         {data.incomeTypes.length > 0 && (
           <p style={{ fontSize: 12, color: "#374151", margin: "0 0 8px" }}>

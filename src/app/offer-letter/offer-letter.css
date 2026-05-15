@@ -704,3 +704,115 @@
 @media (max-width: 480px) {
   .ol-toast-container { top: 0.75rem; right: 0.75rem; left: 0.75rem; max-width: none; }
 }
+
+/* ── AI Chat Panel ── */
+.offer-letter-app .ol-chat-panel {
+  width: 320px; min-width: 320px; max-width: 320px;
+  display: flex; flex-direction: column;
+  background: #ffffff; border-right: 1px solid #e2e8f0;
+  height: 100%; overflow: hidden;
+}
+.offer-letter-app .ol-chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.offer-letter-app .ol-chat-header-left {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.offer-letter-app .ol-chat-header-left svg { color: var(--accent-dark); }
+.offer-letter-app .ol-chat-title { font-size: 0.82rem; font-weight: 700; color: var(--primary); }
+.offer-letter-app .ol-chat-badge {
+  font-size: 0.65rem; font-weight: 600; background: #fef3c7; color: #92400e;
+  padding: 0.15rem 0.45rem; border-radius: 999px;
+}
+.offer-letter-app .ol-chat-close {
+  width: 24px; height: 24px; border: none; background: transparent;
+  cursor: pointer; font-size: 1.2rem; color: #94a3b8; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.offer-letter-app .ol-chat-close:hover { background: #f1f5f9; color: #475569; }
+
+.offer-letter-app .ol-chat-messages {
+  flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;
+}
+.offer-letter-app .ol-chat-welcome {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 1rem; margin-bottom: 0.5rem;
+}
+.offer-letter-app .ol-chat-welcome p { font-size: 0.8rem; color: #475569; margin: 0 0 0.5rem; line-height: 1.5; }
+.offer-letter-app .ol-chat-welcome p:last-child { margin-bottom: 0; color: #64748b; font-style: italic; }
+
+.offer-letter-app .ol-chat-msg { display: flex; }
+.offer-letter-app .ol-chat-msg--user { justify-content: flex-end; }
+.offer-letter-app .ol-chat-msg--assistant { justify-content: flex-start; }
+.offer-letter-app .ol-chat-bubble {
+  max-width: 88%; padding: 0.6rem 0.85rem; border-radius: 14px;
+  font-size: 0.8rem; line-height: 1.5; word-wrap: break-word;
+}
+.offer-letter-app .ol-chat-msg--user .ol-chat-bubble {
+  background: var(--primary); color: #fff; border-bottom-right-radius: 4px;
+}
+.offer-letter-app .ol-chat-msg--assistant .ol-chat-bubble {
+  background: #f1f5f9; color: #334155; border-bottom-left-radius: 4px;
+}
+.offer-letter-app .ol-chat-thinking { padding: 0.7rem 1rem; }
+.offer-letter-app .ol-chat-dots { display: flex; gap: 4px; align-items: center; }
+.offer-letter-app .ol-chat-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: #94a3b8;
+  animation: ol-dotPulse 1.2s ease-in-out infinite;
+}
+.offer-letter-app .ol-chat-dots span:nth-child(2) { animation-delay: 0.2s; }
+.offer-letter-app .ol-chat-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ol-dotPulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+.offer-letter-app .ol-chat-error {
+  padding: 0.5rem 0.75rem; margin: 0 0.75rem 0.5rem;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.72rem; color: #dc2626;
+}
+.offer-letter-app .ol-chat-error button {
+  background: none; border: none; color: #ef4444; cursor: pointer;
+  font-size: 0.68rem; font-weight: 600;
+}
+
+.offer-letter-app .ol-chat-input-bar {
+  padding: 0.6rem 0.75rem; border-top: 1px solid #e2e8f0;
+  display: flex; align-items: flex-end; gap: 0.5rem; background: #fff;
+}
+.offer-letter-app .ol-chat-textarea {
+  flex: 1; resize: none; overflow-y: auto; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 0.5rem 0.75rem; font-size: 0.8rem;
+  line-height: 1.4; max-height: 120px; outline: none;
+  font-family: inherit; transition: border-color 0.15s;
+}
+.offer-letter-app .ol-chat-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15); }
+.offer-letter-app .ol-chat-textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+.offer-letter-app .ol-chat-send {
+  width: 32px; height: 32px; border: none; border-radius: 8px;
+  background: var(--primary); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s;
+}
+.offer-letter-app .ol-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.offer-letter-app .ol-chat-send:hover:not(:disabled) { opacity: 0.85; }
+
+/* Toggle button */
+.offer-letter-app .ol-chat-toggle {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100;
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.65rem 1rem; border-radius: 999px;
+  background: var(--primary); color: #fff; border: none;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.offer-letter-app .ol-chat-toggle:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35); }
+
+@media (max-width: 768px) {
+  .offer-letter-app .ol-chat-panel {
+    position: fixed; inset: 0; width: 100%; min-width: 100%; max-width: 100%;
+    z-index: 200; border-right: none;
+  }
+}

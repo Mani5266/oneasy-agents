@@ -51,14 +51,40 @@
 
 /* ─── Print ────────────────────────────────────────────────────────────────── */
 
+/* ─── Print — Professional CA Certificate Layout ──────────────────────────── */
+
 @media print {
+  /* CRITICAL: margin-top on every page gives 3 lines; first page spacer adds 3 more */
   @page {
     size: A4;
-    margin: 15mm 0 0 0;
+    margin: 36pt 0 0 0;
   }
 
-  .no-print {
+  /* ─── Global Resets ─── */
+  html, body, #__next, [data-nextjs-scroll-focus-boundary] {
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything that shouldn't print */
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer {
     display: none !important;
+  }
+
+  /* Remove ALL layout constraints from parent containers */
+  .print-bg-none,
+  .print-bg-none * {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    float: none !important;
   }
 
   .print-bg-none {
@@ -69,30 +95,125 @@
     background: transparent !important;
     width: 100% !important;
     max-width: 100% !important;
+    display: block !important;
   }
 
-  /* Certificate container — remove screen styling */
+  /* ─── Certificate Container ─── */
   .print-full {
+    display: block !important;
     margin: 0 !important;
-    padding: 0 15mm 10mm 15mm !important;
+    padding: 0 18mm 12mm 18mm !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #fff !important;
     width: 100% !important;
     max-width: 100% !important;
-    line-height: 1.6 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    font-family: "Times New Roman", Times, serif !important;
     font-size: 12pt !important;
+    line-height: 1.6 !important;
+    color: #000 !important;
   }
 
-  /* Allow tables to break across pages; keep individual rows together */
-  table { page-break-inside: auto; }
-  tr    { page-break-inside: avoid; }
-  thead { display: table-header-group; }
+  /* First page top spacer — 6 blank lines */
+  .print-top-spacer {
+    height: 36pt !important;
+    display: block !important;
+  }
 
-  /* Signature block should not be orphaned */
-  .print-full > div:last-child { page-break-inside: avoid; }
+  /* ─── Typography ─── */
+  .print-full p,
+  .print-full li,
+  .print-full td,
+  .print-full th {
+    font-family: "Times New Roman", Times, serif !important;
+    color: #000 !important;
+  }
 
+  .print-full p {
+    text-align: justify !important;
+  }
+
+  /* Headings — centered, bold, uppercase */
+  .print-full .print-heading {
+    text-align: center !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+  }
+
+  /* ─── Table Styling ─── */
+  .print-full table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    margin-bottom: 16pt !important;
+  }
+
+  .print-full thead {
+    display: table-header-group !important;
+  }
+
+  .print-full tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-full th {
+    font-weight: 700 !important;
+    background: #fff !important;
+    border: 1px solid #000 !important;
+    padding: 5pt 8pt !important;
+  }
+
+  .print-full td {
+    border: 1px solid #000 !important;
+    padding: 4pt 8pt !important;
+    vertical-align: top !important;
+  }
+
+  /* Right-align currency columns */
+  .print-full td[style*="text-align: right"],
+  .print-full th[style*="text-align: right"] {
+    text-align: right !important;
+  }
+
+  /* ─── Section/Annexure Groups ─── */
+  .print-annexure-group {
+    padding-top: 14pt !important;
+    margin-top: 0 !important;
+    break-inside: auto !important;
+  }
+
+  /* ALL paragraphs before the table (heading + italic subtitle) must stay with table */
+  .print-annexure-group > p {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Table must not break away from its heading */
+  .print-annexure-group > table {
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  /* If annexure doesn't fit, move entire section to next page */
+  .print-annexure-break {
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+
+  /* ─── Signature Block ─── */
+  .print-signature-block {
+    margin-top: 36pt !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: block !important;
+  }
+
+  /* ─── Child div resets ─── */
   .print-full > div {
     box-shadow: none !important;
     border-radius: 0 !important;
@@ -102,22 +223,23 @@
     background: #fff !important;
   }
 
-  .print-top-spacer { height: 0 !important; }
-
-  .print-annexure-break {
-    page-break-before: auto !important;
-    break-before: auto !important;
+  /* ─── Prevent orphaned headings at page bottom ─── */
+  .print-full h1,
+  .print-full h2,
+  .print-full h3,
+  .print-full h4,
+  .print-full strong {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
-  .print-annexure-group {
-    break-inside: auto !important;
-    padding-top: 8mm !important;
-    margin-top: 0 !important;
+  /* ─── Supporting docs list ─── */
+  .print-full ol,
+  .print-full ul {
+    page-break-inside: auto !important;
   }
 
-  .print-signature-block {
-    margin-top: 3em !important;
+  .print-full li {
     page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 }

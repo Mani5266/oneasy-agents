@@ -20,12 +20,16 @@ function parseFormData(raw: unknown): FormData {
 export async function saveCertificateDraft(formData: FormData): Promise<string> {
   const userId = await requireUserId();
 
+  // Use placeholder values for client if applicant info not yet filled
+  const clientName = formData.fullName || "Draft";
+  const clientPan = formData.passportNumber?.toUpperCase() || `DRAFT_${Date.now()}`;
+
   const { data: client, error: clientError } = await supabase
     .from("networth_clients")
     .upsert({
-      full_name: formData.fullName,
-      salutation: formData.salutation,
-      pan_number: formData.passportNumber.toUpperCase(),
+      full_name: clientName,
+      salutation: formData.salutation || "",
+      pan_number: clientPan,
       user_id: userId,
     }, { onConflict: 'user_id,pan_number' })
     .select()
@@ -37,11 +41,11 @@ export async function saveCertificateDraft(formData: FormData): Promise<string> 
     .from("networth_certificates")
     .insert({
       client_id: client.id,
-      purpose: formData.purpose,
-      country: formData.country,
-      cert_date: formData.certDate,
-      udin: formData.udin,
-      nickname: formData.nickname || formData.purpose,
+      purpose: formData.purpose || "draft",
+      country: formData.country || null,
+      cert_date: formData.certDate || null,
+      udin: formData.udin || null,
+      nickname: formData.nickname || formData.purpose || "Untitled",
       status: "draft",
       form_data: formData as unknown as Record<string, unknown>,
       user_id: userId,
@@ -56,25 +60,48 @@ export async function saveCertificateDraft(formData: FormData): Promise<string> 
   return cert.id;
 }
 
-export async function updateCertificateDraft(id: string, formData: FormData): Promise<void> {
+export async function updateCertificateDraft(id: string, formData: FormData): Promise<boolean> {
   const userId = await requireUserId();
 
+  // First verify the certificate exists
   const { data: oldCert } = await supabase
     .from("networth_certificates")
-    .select("form_data")
+    .select("form_data, client_id")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
 
-  if (oldCert) {
-    snapshotVersion(userId, id, oldCert.form_data as Record<string, unknown>);
+  // Certificate doesn't exist — signal caller to create a new one
+  if (!oldCert) return false;
+
+  snapshotVersion(userId, id, oldCert.form_data as Record<string, unknown>);
+
+  // Update client record if applicant info is now available
+  if (formData.fullName && formData.passportNumber && oldCert.client_id) {
+    await supabase
+      .from("networth_clients")
+      .update({
+        full_name: formData.fullName,
+        salutation: formData.salutation || "",
+        pan_number: formData.passportNumber.toUpperCase(),
+      })
+      .eq("id", oldCert.client_id)
+      .eq("user_id", userId);
   }
+
+  // Build nickname: "Purpose - Name" when both are available
+  const purposeLabel = formData.purpose
+    ? formData.purpose.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : "";
+  const nickname = formData.fullName
+    ? `${purposeLabel} - ${formData.fullName}`.trim()
+    : formData.nickname || purposeLabel;
 
   const { error } = await supabase
     .from("networth_certificates")
     .update({
       form_data: formData as unknown as Record<string, unknown>,
-      nickname: formData.nickname,
+      nickname,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -90,6 +117,8 @@ export async function updateCertificateDraft(id: string, formData: FormData): Pr
     oldCert?.form_data as Record<string, unknown> ?? null,
     formData as unknown as Record<string, unknown>
   );
+
+  return true;
 }
 
 export async function getCertificate(id: string): Promise<FormData> {

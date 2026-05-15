@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { 
-  Shield, Handshake, FileText, Mail, Calculator, 
+  Shield, Handshake, FileText, Mail, Calculator, ClipboardList,
   LogOut, ArrowRight, Search, Sparkles, Zap
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -29,6 +29,7 @@ interface Props {
     networth: number
     partnership: number
     llp: number
+    llpForm: number
     offerLetter: number
     salary: number
   }
@@ -83,16 +84,16 @@ export default function DashboardClient({ user, stats }: Props) {
       iconBg: '#dbeafe',
     },
     {
-      id: 'llp',
+      id: 'llp-form',
       title: 'LLP Agreement',
-      description: 'Create LLP agreements through guided AI chat with live document preview',
-      icon: FileText,
-      href: '/llp',
-      stat: stats.llp,
+      description: 'Generate LLP agreements using a step-by-step form wizard with AI chat',
+      icon: ClipboardList,
+      href: '/llp-form',
+      stat: stats.llpForm,
       statLabel: 'agreements',
-      accentColor: '#059669',
-      accentGradient: 'linear-gradient(135deg, #059669, #047857)',
-      iconBg: '#d1fae5',
+      accentColor: '#0891b2',
+      accentGradient: 'linear-gradient(135deg, #0891b2, #0e7490)',
+      iconBg: '#cffafe',
     },
     {
       id: 'offer-letter',

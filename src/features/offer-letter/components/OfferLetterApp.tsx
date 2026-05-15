@@ -9,6 +9,7 @@ import { fmtINR, toWords, formatCardDate, numberToWords } from '../lib/utils';
 import { OfferRecord, OfferPayload, FIELD_STEP_MAP } from '../types';
 import { createClient } from '@/lib/supabase/client';
 import { usePaymentGate } from '@/hooks/usePaymentGate';
+import { OfferChatPanel, ChatMessage } from './OfferChatPanel';
 
 // ── Toast Component ──
 function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: string) => void }) {
@@ -137,6 +138,9 @@ export default function OfferLetterApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingSidebar, setLoadingSidebar] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatExtractedData, setChatExtractedData] = useState<Record<string, string>>({});
 
   const serverSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -438,6 +442,15 @@ export default function OfferLetterApp() {
   const ctcVal = parseInt(form.formData.annualCTC) || 0;
   const salaryRows = ctcVal > 0 ? buildBreakdown(ctcVal) : [];
 
+  // ── AI Chat data handler ──
+  const handleChatExtractedData = useCallback((data: Record<string, string>) => {
+    for (const [key, value] of Object.entries(data)) {
+      if (value && key in form.formData) {
+        form.updateField(key, value);
+      }
+    }
+  }, [form]);
+
   // ── Render ──
   return (
     <div className="offer-letter-app">
@@ -498,6 +511,26 @@ export default function OfferLetterApp() {
             </div>
           </div>
         </aside>
+
+        {/* AI Chat Panel */}
+        {chatOpen && (
+          <OfferChatPanel
+            onExtractedData={handleChatExtractedData}
+            onClose={() => setChatOpen(false)}
+            messages={chatMessages}
+            setMessages={setChatMessages}
+            extractedData={chatExtractedData}
+            setExtractedData={setChatExtractedData}
+          />
+        )}
+
+        {/* AI Chat Toggle */}
+        {!chatOpen && (
+          <button className="ol-chat-toggle" onClick={() => setChatOpen(true)} aria-label="Open AI Assistant">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>AI</span>
+          </button>
+        )}
 
         {/* Main Content */}
         <main className="content-area" ref={contentAreaRef}>

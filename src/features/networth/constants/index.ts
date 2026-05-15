@@ -65,13 +65,13 @@ export const INCOME_PERSONS: string[] = [
 // ─── Assessment Year Options ──────────────────────────────────────────────────
 
 export const ASSESSMENT_YEAR_OPTIONS: { value: string; label: string }[] = (() => {
-  const currentYear = new Date().getFullYear();
   const options: { value: string; label: string }[] = [];
-  for (let y = currentYear - 5; y <= currentYear + 2; y++) {
+  // Range: 2024-25 to 2029-30, default should be 2025-26
+  for (let y = 2029; y >= 2024; y--) {
     const label = `${y}-${String(y + 1).slice(-2)}`;
     options.push({ value: label, label });
   }
-  return options.reverse();
+  return options;
 })();
 
 // ─── Property Persons (Annexure II redesign) ──────────────────────────────────

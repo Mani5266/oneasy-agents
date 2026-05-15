@@ -22,6 +22,7 @@ import { STEPS } from "@/features/networth/constants";
 import { buildCertificateText, computeTotals, formatINR, parseAmount } from "@/features/networth/lib/utils";
 import { validateFormStep, getValidationMessages, validateAmountsForCertificate } from "@/features/networth/lib/validation";
 import { deepMergeFormData } from "@/features/networth/lib/merge";
+import { buildCertificateHtml } from "@/features/networth/lib/buildCertificateHtml";
 import {
   saveCertificateDraft,
   updateCertificateDraft,
@@ -96,7 +97,7 @@ function WizardShell() {
   // FIX 3: Ref-based mutex to prevent double-click duplicate saves
   const savingRef = useRef(false);
 
-  // Phase 3 FIX 7: Track unsaved changes — warn before tab close
+  // Phase 3 FIX 7: Track unsaved changes (no beforeunload warning — soft reload expected)
   const dirtyRef = useRef(false);
   const initialDataRef = useRef(data);
 
@@ -106,17 +107,6 @@ function WizardShell() {
       dirtyRef.current = true;
     }
   }, [data]);
-
-  // Attach beforeunload handler — warns user about unsaved changes
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (dirtyRef.current) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, []);
 
   // Restore saved step from localStorage on mount, then persist on change
   useEffect(() => {
@@ -278,11 +268,18 @@ function WizardShell() {
       // 2. Restore certificate ID for continued editing (form data is already in localStorage)
       const currentId = localStorage.getItem("networth_current_id");
       if (currentId) {
-        setCertificateId(currentId);
-        // Restore chat for the active certificate
-        const { messages: m, extractedData: e } = loadChat(currentId);
-        setChatMessages(m);
-        setChatExtractedData(e);
+        // Verify it still exists in DB before restoring
+        try {
+          await getCertificate(currentId);
+          setCertificateId(currentId);
+          // Restore chat for the active certificate
+          const { messages: m, extractedData: e } = loadChat(currentId);
+          setChatMessages(m);
+          setChatExtractedData(e);
+        } catch {
+          // Stale ID — certificate no longer exists, clear it
+          localStorage.removeItem("networth_current_id");
+        }
       }
     };
 
@@ -404,7 +401,7 @@ function WizardShell() {
 
       // FIX 1: Read from ref instead of stale closure
       const newData = { ...dataRef.current };
-      if (currentStep === 0 && !newData.nickname && newData.purpose) {
+      if (!newData.nickname && newData.purpose) {
         newData.nickname = newData.purpose
           .split("_")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -412,7 +409,7 @@ function WizardShell() {
         setData(newData);
       }
 
-      if (currentStep === 0 && !certificateId) {
+      if (!certificateId) {
         const id = await saveCertificateDraft(newData);
         // Migrate chat from "__new__" to real ID
         if (chatMapRef.current["__new__"]) {
@@ -421,21 +418,34 @@ function WizardShell() {
           saveChatMap();
         }
         updateCertificateId(id);
-      } else if (certificateId) {
-        await updateCertificateDraft(certificateId, newData);
+        await loadHistory(); // Refresh sidebar to show new draft
+      } else {
+        const updated = await updateCertificateDraft(certificateId, newData);
+        if (!updated) {
+          // Certificate ID is stale (doesn't exist in DB) — create fresh
+          const id = await saveCertificateDraft(newData);
+          if (chatMapRef.current[certificateId]) {
+            chatMapRef.current[id] = chatMapRef.current[certificateId];
+            delete chatMapRef.current[certificateId];
+            saveChatMap();
+          }
+          updateCertificateId(id);
+        }
+        await loadHistory(); // Refresh sidebar with updated draft
       }
 
       dirtyRef.current = false; // Phase 3 FIX 7: Reset dirty flag after successful save
       toast("Draft saved", "success");
       return true; // FIX 2: Signal success
-    } catch {
+    } catch (err) {
+      console.error("[handleSave] Failed:", err);
       toast("Failed to save draft", "error");
       return false; // FIX 2: Signal failure
     } finally {
       setSaving(false);
       savingRef.current = false;
     }
-  }, [certificateId, updateCertificateId, setData, toast, saveChatMap]);
+  }, [certificateId, updateCertificateId, setData, toast, saveChatMap, loadHistory]);
 
   // ── Next with Zod validation ─────────────────────────────────────────────
 
@@ -466,7 +476,7 @@ function WizardShell() {
   // ── Copy & Print ─────────────────────────────────────────────────────────
 
   // Payment state
-  const [isPaid, setIsPaid] = useState(false);
+  const [isPaid, setIsPaid] = useState(true); // BYPASS: payment disabled for testing
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Check payment status when certificate changes or step reaches preview
@@ -577,8 +587,49 @@ function WizardShell() {
   }, [data, toast, handlePayment]);
 
   const printCertificate = useCallback(() => {
-    handlePayment(() => window.print());
-  }, [handlePayment]);
+    handlePayment(async () => {
+      // Grab the rendered certificate HTML from the DOM
+      const el = document.querySelector(".print-full");
+      if (!el) {
+        toast("Certificate preview not found", "error");
+        return;
+      }
+      const html = buildCertificateHtml(el.innerHTML);
+
+      toast("Generating PDF...", "info");
+
+      try {
+        const res = await fetch("/api/networth/generate-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html, candidateName: data.fullName || "" }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Unknown error" }));
+          toast(err.error || "PDF generation failed", "error");
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const candidateName = (data.fullName || "").trim().replace(/\s+/g, "_");
+        a.download = candidateName
+          ? `Networth_Certificate_${candidateName}.pdf`
+          : "Networth_Certificate.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast("PDF downloaded!", "success");
+      } catch (e) {
+        console.error("[PDF Download]", e);
+        toast("PDF generation failed", "error");
+      }
+    });
+  }, [handlePayment, toast]);
 
   // ── Keyboard Shortcuts ──────────────────────────────────────────────────
   useEffect(() => {
@@ -662,12 +713,6 @@ function WizardShell() {
                     </>
                   )}
                 </button>
-                {isPaid && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full">
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                    Paid
-                  </span>
-                )}
               </div>
             </div>
 

@@ -1,0 +1,21 @@
+.llp-deed-preview {
+  font-family: 'Times New Roman', Georgia, serif;
+  color: #1a1a1a;
+  line-height: 1.8;
+}
+.llp-deed-preview h2,
+.llp-deed-preview h3,
+.llp-deed-preview h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+}
+.llp-deed-preview h2 { font-size: 1.2em; text-align: center; text-transform: uppercase; }
+.llp-deed-preview h3 { font-size: 1.05em; }
+.llp-deed-preview p { margin-bottom: 0.8em; text-align: justify; }
+.llp-deed-preview ol, .llp-deed-preview ul { margin-left: 1.5em; margin-bottom: 1em; }
+.llp-deed-preview li { margin-bottom: 0.4em; }
+.llp-deed-preview .filled { color: #065f46; font-weight: 600; }
+.llp-deed-preview .empty { color: #dc2626; background: #fef2f2; padding: 0 4px; border-radius: 3px; font-style: italic; }
+.llp-deed-preview .sig-block { display: inline-block; min-width: 180px; text-align: center; margin: 2em 2em 0 0; padding-top: 3em; border-top: 1px solid #333; }
+.llp-deed-preview .sub-sec { font-size: 0.95em; font-style: italic; }

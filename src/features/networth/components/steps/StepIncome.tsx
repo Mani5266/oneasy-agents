@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Section, Checkbox, Input, Select } from "../ui";
 import { FileUpload } from "../ui/FileUpload";
 import { INCOME_PERSONS, ASSESSMENT_YEAR_OPTIONS } from "../../constants";
@@ -141,13 +141,32 @@ export function StepIncome({ certificateId }: StepIncomeProps) {
               Income Amounts <span className="text-red-500">*</span>
             </p>
             <div className="mb-3 max-w-xs">
-              <Select
-                label="Assessment Year"
-                options={ASSESSMENT_YEAR_OPTIONS}
-                value={assessmentYear}
-                onChange={(e) => updateField("assessmentYear", e.target.value)}
-                placeholder="Select Assessment Year"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Assessment Year</label>
+              <select
+                value={ASSESSMENT_YEAR_OPTIONS.some(o => o.value === assessmentYear) ? assessmentYear : "custom"}
+                onChange={(e) => {
+                  if (e.target.value === "custom") {
+                    updateField("assessmentYear", "");
+                  } else {
+                    updateField("assessmentYear", e.target.value);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500"
+              >
+                {ASSESSMENT_YEAR_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+                <option value="custom">Custom Year</option>
+              </select>
+              {(!ASSESSMENT_YEAR_OPTIONS.some(o => o.value === assessmentYear) && assessmentYear !== derivedYear) || (!ASSESSMENT_YEAR_OPTIONS.some(o => o.value === assessmentYear) && !assessmentYear) ? (
+                <input
+                  type="text"
+                  value={assessmentYear}
+                  onChange={(e) => updateField("assessmentYear", e.target.value)}
+                  placeholder="e.g. 2030-31"
+                  className="mt-2 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400/30 focus:border-gold-500"
+                />
+              ) : null}
             </div>
 
             <div className="border border-slate-200 rounded-xl overflow-hidden">

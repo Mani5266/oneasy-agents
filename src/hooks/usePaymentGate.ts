@@ -4,6 +4,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 type Agent = 'networth' | 'llp' | 'partnership' | 'offerletter';
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PAYMENT BYPASS: Set to false to re-enable Razorpay payments
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const BYPASS_PAYMENT = true;
+
 interface UsePaymentGateOptions {
   agent: Agent;
   documentId: string | null;
@@ -34,6 +39,15 @@ function ensureRazorpayScript(): Promise<void> {
 }
 
 export function usePaymentGate({ agent, documentId }: UsePaymentGateOptions): UsePaymentGateResult {
+  // BYPASS: skip all payment logic, allow free downloads
+  if (BYPASS_PAYMENT) {
+    return {
+      isPaid: true,
+      paymentLoading: false,
+      requirePayment: async (onSuccess: () => void) => { onSuccess(); },
+    };
+  }
+
   const [isPaid, setIsPaid] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const checkedRef = useRef<string | null>(null);
@@ -133,6 +147,9 @@ export function usePaymentGate({ agent, documentId }: UsePaymentGateOptions): Us
  * Returns a promise that resolves to true if payment succeeded (or was already paid).
  */
 export async function requestPaymentForDocument(agent: Agent, documentId: string): Promise<boolean> {
+  // BYPASS: skip payment, always allow
+  if (BYPASS_PAYMENT) return true;
+
   // Check if already paid
   try {
     const checkRes = await fetch(`/api/payments/check?agent=${agent}&documentId=${documentId}`);
