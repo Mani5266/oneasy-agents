@@ -53,6 +53,7 @@ export interface OfferRecord {
   annual_ctc: number;
   payload: OfferPayload;
   doc_url: string | null;
+  pdf_url: string | null;
   created_at: string;
   updated_at: string;
 }

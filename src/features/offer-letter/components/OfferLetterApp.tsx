@@ -5,7 +5,7 @@ import { useOfferForm, FormData } from '../hooks/useOfferForm';
 import { useOfferCrud } from '../hooks/useOfferCrud';
 import { useToast, Toast } from '../hooks/useToast';
 import { buildBreakdown } from '../lib/salary';
-import { fmtINR, toWords, formatCardDate, numberToWords } from '../lib/utils';
+import { fmtINR, toWords, formatCardDate } from '../lib/utils';
 import { OfferRecord, OfferPayload, FIELD_STEP_MAP } from '../types';
 import { createClient } from '@/lib/supabase/client';
 import { usePaymentGate } from '@/hooks/usePaymentGate';
@@ -147,6 +147,20 @@ export default function OfferLetterApp() {
   const serverSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentAreaRef = useRef<HTMLDivElement>(null);
+  const currentOfferIdRef = useRef<string | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => {
+    currentOfferIdRef.current = currentOfferId;
+  }, [currentOfferId]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (serverSaveTimer.current) clearTimeout(serverSaveTimer.current);
+      if (sidebarRefreshTimer.current) clearTimeout(sidebarRefreshTimer.current);
+    };
+  }, []);
 
   // ── Fetch sidebar drafts ──
   const fetchSidebarDrafts = useCallback(async () => {
@@ -167,6 +181,13 @@ export default function OfferLetterApp() {
     try {
       const data = await crud.getOffers();
       setOffers(data);
+      // Pre-warm signed URLs for instant PDF downloads
+      const { prefetchDownloadUrl } = await import('@/lib/downloadFromStorage');
+      data.forEach((o: OfferRecord) => {
+        if (o.pdf_url) {
+          prefetchDownloadUrl('offerletter-docs', o.pdf_url, `Offer_Letter - ${o.emp_name || 'Employee'}.pdf`);
+        }
+      });
     } catch (e) {
       console.error('fetchOffers error:', e);
     } finally {
@@ -210,17 +231,17 @@ export default function OfferLetterApp() {
     serverSaveTimer.current = setTimeout(async () => {
       const payload = form.getPayload();
       const empName = payload.empFullName || 'Untitled';
-      if (!currentOfferId && empName === 'Untitled' && !payload.orgName && !payload.designation) return;
+      if (!currentOfferIdRef.current && empName === 'Untitled' && !payload.orgName && !payload.designation) return;
       setSaving(true);
       try {
         const saved = await crud.saveOffer({
-          id: currentOfferId,
+          id: currentOfferIdRef.current,
           emp_name: empName,
           designation: payload.designation || '',
           annual_ctc: payload.annualCTC || 0,
           payload,
         });
-        if (!currentOfferId) {
+        if (!currentOfferIdRef.current) {
           setCurrentOfferId(saved.id);
         }
         // Debounced sidebar refresh
@@ -229,7 +250,7 @@ export default function OfferLetterApp() {
       } catch (e) { console.error('Auto-save failed:', e); }
       finally { setSaving(false); }
     }, 800);
-  }, [form, currentOfferId, crud, fetchSidebarDrafts]);
+  }, [form, crud, fetchSidebarDrafts]);
 
   // On form change, save draft + server
   const handleFieldChange = useCallback((id: string, value: string) => {
@@ -439,7 +460,7 @@ export default function OfferLetterApp() {
       const res = await fetch('/api/offer-letter/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, empName }),
+        body: JSON.stringify({ html, empName, offerId: currentOfferIdRef.current }),
       });
 
       if (!res.ok) {
@@ -462,6 +483,22 @@ export default function OfferLetterApp() {
       setGeneratingPdf(false);
     }
   }, [form, showToast]);
+
+  // ── Download stored PDF from history ──
+  const handleDownloadStoredPdf = useCallback(async (id: string) => {
+    try {
+      const o = await crud.getOfferById(id);
+      if (!o || !o.pdf_url) {
+        showToast('error', 'No PDF found. Please generate the PDF first.');
+        return;
+      }
+      const { downloadFromStorage } = await import('@/lib/downloadFromStorage');
+      await downloadFromStorage('offerletter-docs', o.pdf_url, `Offer_Letter - ${o.emp_name || 'Employee'}.pdf`);
+    } catch (e) {
+      console.error('PDF download failed:', e);
+      showToast('error', 'Failed to download PDF.');
+    }
+  }, [crud, showToast]);
 
   // ── Sidebar rename ──
   const handleSidebarRename = useCallback(async (id: string, newName: string) => {
@@ -623,6 +660,7 @@ export default function OfferLetterApp() {
               onDuplicate={handleDuplicate}
               onDelete={handleDelete}
               onDownload={handleDownload}
+              onDownloadPdf={handleDownloadStoredPdf}
               onView={(id) => { const o = offers.find(x => x.id === id); if (o) setModalOffer(o); }}
               onGoToGenerator={() => switchPage('generator')}
             />
@@ -962,7 +1000,7 @@ function GeneratorPage({ form, ctcVal, salaryRows, generating, generatingPdf, sa
 }
 
 // ── History Page ──
-function HistoryPage({ offers, loading, onRefresh, onEdit, onRegenerate, onDuplicate, onDelete, onDownload, onView, onGoToGenerator }: {
+function HistoryPage({ offers, loading, onRefresh, onEdit, onRegenerate, onDuplicate, onDelete, onDownload, onDownloadPdf, onView, onGoToGenerator }: {
   offers: OfferRecord[];
   loading: boolean;
   onRefresh: () => void;
@@ -971,6 +1009,7 @@ function HistoryPage({ offers, loading, onRefresh, onEdit, onRegenerate, onDupli
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onDownload: (id: string) => void;
+  onDownloadPdf: (id: string) => void;
   onView: (id: string) => void;
   onGoToGenerator: () => void;
 }) {
@@ -1009,7 +1048,8 @@ function HistoryPage({ offers, loading, onRefresh, onEdit, onRegenerate, onDupli
                     <div className="offer-detail-row"><span className="offer-detail-label">Joining</span><span className="offer-detail-value">{p.joiningDate || 'N/A'}</span></div>
                   </div>
                   <div className="offer-card-actions">
-                    {o.doc_url && <button className="btn-card btn-download-offer" onClick={() => onDownload(o.id)}>Download</button>}
+                    {o.doc_url && <button className="btn-card btn-download-offer" onClick={() => onDownload(o.id)}>Download DOCX</button>}
+                    {o.pdf_url && <button className="btn-card btn-download-offer" onClick={() => onDownloadPdf(o.id)}>Download PDF</button>}
                     <button className="btn-card btn-regenerate" onClick={() => onRegenerate(o.id)}>Re-generate</button>
                     <button className="btn-card btn-edit-offer" onClick={() => onEdit(o.id)}>Edit</button>
                     <button className="btn-card btn-duplicate-offer" onClick={() => onDuplicate(o.id)}>Duplicate</button>

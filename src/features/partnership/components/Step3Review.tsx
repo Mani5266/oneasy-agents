@@ -428,7 +428,7 @@ export function Step3Review({ onPrev }: Step3ReviewProps) {
       const res = await fetch('/api/partnership/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, businessName }),
+        body: JSON.stringify({ html, businessName, deedId: currentDeedId }),
       });
       if (!res.ok) return;
       const blob = await res.blob();

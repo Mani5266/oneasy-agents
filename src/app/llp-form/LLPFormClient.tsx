@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { SaveIndicator } from "@/components/SaveIndicator";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { downloadFromStorage, prefetchDownloadUrl } from "@/lib/downloadFromStorage";
 import { LLPFormProvider, useLLPForm } from "@/features/llp-form/hooks/useFormContext";
 import { ProgressBar } from "@/features/llp-form/components/ProgressBar";
 import { WizardNav } from "@/features/llp-form/components/WizardNav";
@@ -29,6 +30,7 @@ import {
   Menu,
   X,
   ArrowLeft,
+  Download,
 } from "lucide-react";
 
 export default function LLPFormClient() {
@@ -44,6 +46,7 @@ interface HistoryItem {
   llp_name: string | null;
   status: string;
   created_at: string;
+  pdf_url: string | null;
 }
 
 function WizardShell() {
@@ -100,6 +103,12 @@ function WizardShell() {
       if (res.ok) {
         const items = await res.json();
         setHistory(items);
+        // Pre-warm signed URLs for instant PDF downloads
+        items.forEach((item: HistoryItem) => {
+          if (item.pdf_url) {
+            prefetchDownloadUrl("llp-docs", item.pdf_url, `LLP Agreement - ${item.llp_name || "Untitled"}.pdf`);
+          }
+        });
       }
     } catch {}
   }, []);
@@ -394,8 +403,24 @@ function WizardShell() {
                   </div>
                 </button>
 
-                {/* Delete button */}
+                {/* Action buttons */}
                 <div className="absolute right-2 top-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  {item.pdf_url && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadFromStorage(
+                          "llp-docs",
+                          item.pdf_url!,
+                          `LLP Agreement - ${item.llp_name || "Untitled"}.pdf`
+                        ).catch(() => alert("PDF download failed"));
+                      }}
+                      className="p-1.5 text-slate-500 hover:text-emerald-400 transition-colors rounded-md hover:bg-emerald-500/10"
+                      title="Download PDF"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteDraft(item.id); }}
                     className="p-1.5 text-slate-500 hover:text-red-400 transition-colors rounded-md hover:bg-red-500/10"

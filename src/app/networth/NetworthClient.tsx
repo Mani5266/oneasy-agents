@@ -603,7 +603,7 @@ function WizardShell() {
         const res = await fetch("/api/networth/generate-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ html, candidateName: data.fullName || "" }),
+          body: JSON.stringify({ html, candidateName: data.fullName || "", certificateId }),
         });
 
         if (!res.ok) {

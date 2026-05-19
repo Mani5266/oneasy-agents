@@ -35,9 +35,14 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
+  // Use getSession() for fast local JWT check instead of getUser() which hits Supabase servers.
+  // Middleware runs on every navigation — getUser() adds 100-500ms per page transition.
+  // getSession() validates the JWT locally (no network call). Auth is still verified
+  // server-side in API routes and server components where it matters.
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // Public routes that don't require auth
   const publicRoutes = ['/login', '/signup', '/verify-email', '/reset-password', '/api/auth/']

@@ -25,6 +25,10 @@ export async function getBrowser(): Promise<Browser> {
       ? getLocalChromePath()
       : await chromium.executablePath(),
     headless: true,
+  }).catch((err) => {
+    browserLaunchPromise = null;
+    browserInstance = null;
+    throw err;
   });
 
   browserInstance = await browserLaunchPromise;
@@ -40,9 +44,10 @@ export function resetBrowser() {
 /** Generate a PDF buffer from standalone HTML string */
 export async function generatePdfFromHtml(html: string): Promise<Buffer> {
   const browser = await getBrowser();
-  const page = await browser.newPage();
+  let page;
 
   try {
+    page = await browser.newPage();
     await page.setContent(html, { waitUntil: "domcontentloaded" });
 
     const pdfBuffer = await page.pdf({
@@ -59,8 +64,16 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
     });
 
     return Buffer.from(pdfBuffer);
+  } catch (err) {
+    // If browser disconnected mid-generation, reset for next call
+    if (!browser.connected) {
+      resetBrowser();
+    }
+    throw err;
   } finally {
-    await page.close();
+    if (page) {
+      try { await page.close(); } catch { /* page may already be closed */ }
+    }
   }
 }
 

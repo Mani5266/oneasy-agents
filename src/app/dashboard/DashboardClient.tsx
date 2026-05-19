@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { 
   Shield, Handshake, FileText, Mail, Calculator, ClipboardList,
@@ -35,16 +36,39 @@ interface Props {
   }
 }
 
-export default function DashboardClient({ user, stats }: Props) {
+export default function DashboardClient({ user, stats: initialStats }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [search, setSearch] = useState('')
   const [mounted, setMounted] = useState(false)
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [stats, setStats] = useState(initialStats)
 
   useEffect(() => {
     setMounted(true)
+    // Load stats client-side for instant page render
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      const uid = session.user.id
+      const [nw, pt, llp, llpF, ol, sal] = await Promise.all([
+        supabase.from('networth_certificates').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'completed'),
+        supabase.from('partnership_deeds').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null),
+        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('is_done', true),
+        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'draft'),
+        supabase.from('offerletter_offers').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null),
+        supabase.from('salary_results').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+      ])
+      setStats({
+        networth: nw.count ?? 0,
+        partnership: pt.count ?? 0,
+        llp: llp.count ?? 0,
+        llpForm: llpF.count ?? 0,
+        offerLetter: ol.count ?? 0,
+        salary: sal.count ?? 0,
+      })
+    })()
   }, [])
 
   useEffect(() => {
@@ -143,7 +167,7 @@ export default function DashboardClient({ user, stats }: Props) {
     router.push('/login')
   }
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLElement>, id: string) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
     setHoveredCard(id)
@@ -232,14 +256,15 @@ export default function DashboardClient({ user, stats }: Props) {
         {/* Agent Cards - Split-tone with colored headers */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredAgents.map((agent, i) => (
-            <button
+            <Link
               key={agent.id}
-              onClick={() => !agent.comingSoon && router.push(agent.href)}
+              href={agent.comingSoon ? '#' : agent.href}
+              prefetch={!agent.comingSoon}
               onMouseMove={(e) => handleMouseMove(e, agent.id)}
               onMouseLeave={() => setHoveredCard(null)}
-              className={`group relative text-left rounded-2xl border transition-all duration-300 overflow-hidden ${
+              className={`group relative text-left rounded-2xl border transition-all duration-300 overflow-hidden block ${
                 agent.comingSoon
-                  ? 'cursor-not-allowed opacity-75'
+                  ? 'cursor-not-allowed opacity-75 pointer-events-none'
                   : 'hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5'
               }`}
               style={{
@@ -331,7 +356,7 @@ export default function DashboardClient({ user, stats }: Props) {
                   )}
                 </div>
               </div>
-            </button>
+            </Link>
           ))}
         </div>
 

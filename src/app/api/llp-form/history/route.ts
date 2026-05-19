@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from("llp_agreements")
-    .select("id, llp_name, status, created_at")
+    .select("id, llp_name, status, created_at, pdf_url")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);

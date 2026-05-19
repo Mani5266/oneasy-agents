@@ -145,6 +145,7 @@ export async function getAllCertificates(): Promise<CertificateRecord[]> {
       cert_date,
       status,
       created_at,
+      pdf_url,
       networth_clients (
         full_name
       )
@@ -162,6 +163,7 @@ export async function getAllCertificates(): Promise<CertificateRecord[]> {
     certDate: item.cert_date as string,
     status: item.status as "draft" | "completed",
     createdAt: item.created_at as string,
+    pdf_url: (item.pdf_url as string) || null,
   }));
 }
 

@@ -78,10 +78,13 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const { messages, currentExtractedData } = await req.json();
+  const { messages: rawMessages, currentExtractedData } = await req.json();
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI not configured" }, { status: 500 });
+
+  // Truncate to last 20 messages to prevent token overflow
+  const messages = Array.isArray(rawMessages) ? rawMessages.slice(-20) : rawMessages;
 
   const geminiMessages = [
     { role: "user", parts: [{ text: SYSTEM_PROMPT }] },

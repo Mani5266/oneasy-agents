@@ -39,6 +39,10 @@ function ensureRazorpayScript(): Promise<void> {
 }
 
 export function usePaymentGate({ agent, documentId }: UsePaymentGateOptions): UsePaymentGateResult {
+  const [isPaid, setIsPaid] = useState(BYPASS_PAYMENT ? true : false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const checkedRef = useRef<string | null>(null);
+
   // BYPASS: skip all payment logic, allow free downloads
   if (BYPASS_PAYMENT) {
     return {
@@ -47,10 +51,6 @@ export function usePaymentGate({ agent, documentId }: UsePaymentGateOptions): Us
       requirePayment: async (onSuccess: () => void) => { onSuccess(); },
     };
   }
-
-  const [isPaid, setIsPaid] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const checkedRef = useRef<string | null>(null);
 
   // Check payment status when documentId changes
   useEffect(() => {

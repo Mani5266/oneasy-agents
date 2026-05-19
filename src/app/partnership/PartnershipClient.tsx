@@ -97,7 +97,6 @@ export default function PartnershipClient() {
 
   const handleDeleteDeed = useCallback(
     async (id: string) => {
-      if (!window.confirm('Delete this partnership deed?')) return;
       await deleteDeed(id);
     },
     [deleteDeed]
@@ -268,7 +267,6 @@ export default function PartnershipClient() {
                 className="mobile-backdrop visible"
                 onClick={() => setChatOpen(false)}
                 aria-hidden="true"
-                style={{ display: undefined }}
               />
               <div style={{ width: 300, minWidth: 280, maxWidth: 340, flexShrink: 0, height: '100%', overflow: 'hidden', borderRight: '1px solid var(--border)' }}>
                 <ChatPanel

@@ -7,7 +7,12 @@
 const CSS = `
 @page {
   size: A4;
-  margin: 36pt 0 0 0;
+  margin: 0.5in;
+}
+
+@page :first {
+  margin-top: 0;
+  margin-bottom: 72pt;
 }
 
 * {
@@ -24,7 +29,7 @@ html, body {
 .print-full {
   display: block;
   margin: 0;
-  padding: 0 18mm 12mm 18mm;
+  padding: 0 18mm 0 18mm;
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -39,8 +44,9 @@ html, body {
   color: #000;
 }
 
+/* First page: blank space at top for letterhead */
 .print-top-spacer {
-  height: 36pt;
+  height: 144pt !important;
   display: block;
 }
 

@@ -9,6 +9,8 @@ import { useDeedActions } from '../hooks/useDeedActions';
 import type { Deed } from '../types';
 import { fmtDate } from '../lib/utils';
 import { dbGetDeedById } from '../lib/db';
+import { downloadFromStorage } from '@/lib/downloadFromStorage';
+import { createClient } from '@/lib/supabase/client';
 import { requestPaymentForDocument } from '@/hooks/usePaymentGate';
 
 // ---------------------------------------------------------------------------
@@ -23,6 +25,7 @@ interface DeedCardProps {
   onRegenerate: (id: string) => void;
   onDelete: (id: string) => void;
   onDownload: (id: string) => void;
+  onDownloadPdf: (id: string) => void;
 }
 
 function DeedCard({
@@ -33,6 +36,7 @@ function DeedCard({
   onRegenerate,
   onDelete,
   onDownload,
+  onDownloadPdf,
 }: DeedCardProps) {
   const p = deed.payload || ({} as Deed['payload']);
 
@@ -63,6 +67,9 @@ function DeedCard({
             Download
           </button>
         )}
+        <button onClick={() => onDownloadPdf(deed.id)} className="btn btn-download">
+          PDF
+        </button>
         <button onClick={() => onRegenerate(deed.id)} className="btn btn-edit">
           Re-generate
         </button>
@@ -125,6 +132,28 @@ export function DeedGrid({ onViewDeed }: DeedGridProps) {
     }
   };
 
+  const handleDownloadPdf = async (id: string) => {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('partnership_documents')
+        .select('file_url, file_name')
+        .eq('deed_id', id)
+        .eq('file_type', 'application/pdf')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (!data?.file_url) {
+        alert('No PDF found. Please generate the PDF first.');
+        return;
+      }
+      await downloadFromStorage('partnership-docs', data.file_url, data.file_name || 'Partnership Deed.pdf');
+    } catch (err) {
+      console.error('[DeedGrid] PDF download failed:', err);
+      alert('Failed to download PDF. Try re-generating.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="grid-empty">
@@ -167,6 +196,7 @@ export function DeedGrid({ onViewDeed }: DeedGridProps) {
           onRegenerate={regenerateDeed}
           onDelete={handleDelete}
           onDownload={handleDownload}
+          onDownloadPdf={handleDownloadPdf}
         />
       ))}
     </div>

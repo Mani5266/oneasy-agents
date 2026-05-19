@@ -281,6 +281,7 @@ export const CertificateRecordSchema = z.object({
   certDate: z.string(),
   status: z.enum(["draft", "completed"]),
   createdAt: z.string(),
+  pdf_url: z.string().nullable().optional(),
 });
 
 export const DocumentRecordSchema = z.object({

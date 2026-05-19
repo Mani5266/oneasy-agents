@@ -1,9 +1,13 @@
+"use client";
+
 import dynamic from 'next/dynamic';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const NetworthClient = dynamic(() => import('./NetworthClient'), {
+  ssr: false,
   loading: () => <div className="h-full w-full flex items-center justify-center"><div className="animate-pulse text-white/60">Loading...</div></div>,
 });
 
 export default function NetworthPage() {
-  return <NetworthClient />;
+  return <ErrorBoundary><NetworthClient /></ErrorBoundary>;
 }

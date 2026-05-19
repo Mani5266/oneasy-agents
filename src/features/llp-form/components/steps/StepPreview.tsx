@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import DOMPurify from "dompurify";
 import { useLLPForm } from "../../hooks/useFormContext";
 import { getMissing } from "@/features/llp/types";
 import { renderDeed } from "@/features/llp/lib/deed-template";
@@ -29,7 +30,7 @@ export function StepPreview({ agreementId, isPaid, paymentLoading, onPayment }: 
         const res = await fetch("/api/llp-form/generate-pdf", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ html: fullHtml, llpName: data.llpName || "" }),
+          body: JSON.stringify({ html: fullHtml, llpName: data.llpName || "", agreementId }),
         });
         if (!res.ok) throw new Error("Download failed");
         const blob = await res.blob();
@@ -114,7 +115,7 @@ export function StepPreview({ agreementId, isPaid, paymentLoading, onPayment }: 
       <div className="border border-slate-200 rounded-xl overflow-hidden bg-white max-h-[65vh] overflow-y-auto">
         <div
           className="p-6 text-sm leading-relaxed llp-deed-preview"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       </div>
 

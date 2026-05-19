@@ -7,6 +7,7 @@ import { Button } from "./ui";
 import { Modal } from "./ui/Modal";
 import { ClientDate } from "./ui/ClientDate";
 import { supabase } from "../lib/supabase";
+import { downloadFromStorage, prefetchDownloadUrl } from "@/lib/downloadFromStorage";
 import type { CertificateRecord } from "../types";
 import {
   Plus,
@@ -19,6 +20,7 @@ import {
   CheckCircle2,
   LogOut,
   Sparkles,
+  Download,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -62,6 +64,15 @@ export function Sidebar({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Pre-warm signed URLs for PDF downloads
+  useEffect(() => {
+    history.forEach((cert) => {
+      if (cert.pdf_url) {
+        prefetchDownloadUrl("networth-documents", cert.pdf_url, `Net Worth - ${cert.clientName}.pdf`);
+      }
+    });
+  }, [history]);
 
   const handleRename = async (id: string) => {
     if (!editValue.trim()) {
@@ -209,6 +220,23 @@ export function Sidebar({
 
                 {editingId !== cert.id && (
                   <div className="absolute right-2 top-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                    {cert.pdf_url && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadFromStorage(
+                            "networth-documents",
+                            cert.pdf_url!,
+                            `Net Worth - ${cert.clientName}.pdf`
+                          ).catch(() => alert("PDF download failed"));
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-emerald-400 transition-colors rounded-md hover:bg-emerald-500/10"
+                        aria-label="Download PDF"
+                        title="Download PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
