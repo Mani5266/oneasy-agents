@@ -3,8 +3,15 @@ import Link from 'next/link';
 import './offer-letter.css';
 
 export const metadata: Metadata = {
-  title: 'Offer Letter Generator | OnEasy',
-  description: 'Generate professional offer letters and appointment letters for your organization.',
+  title: 'Offer Letter Generator',
+  description:
+    'Generate professional offer letters and appointment letters with AI. CTC breakdown, company branding, multiple templates, PDF download.',
+  robots: { index: false, follow: false }, // auth-gated agent page
+  openGraph: {
+    title: 'Offer Letter Generator | OnEasy',
+    description:
+      'Generate professional offer letters with AI. CTC breakdown, company branding, multiple templates.',
+  },
 };
 
 export default function OfferLetterLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,19 @@
+import type { Metadata } from 'next';
 import { ToastProvider } from '@/features/partnership/components/Toast';
 import Link from 'next/link';
 import './partnership.css';
+
+export const metadata: Metadata = {
+  title: 'Partnership Deed Generator',
+  description:
+    'Draft comprehensive partnership deeds with AI. Smart clause generation, profit-sharing logic, stamp-duty ready. DOCX & PDF download.',
+  robots: { index: false, follow: false }, // auth-gated agent page
+  openGraph: {
+    title: 'Partnership Deed Generator | OnEasy',
+    description:
+      'Draft comprehensive partnership deeds with AI. Smart clauses, profit-sharing logic, stamp-duty ready.',
+  },
+};
 
 export default function PartnershipLayout({
   children,

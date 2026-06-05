@@ -1,5 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import "./llp.css";
+
+export const metadata: Metadata = {
+  title: "LLP Agreement Generator",
+  description:
+    "Create LLP agreements with AI. MCA-compliant drafts, intelligent clause library, capital contribution mapping, rights & obligations.",
+  robots: { index: false, follow: false }, // auth-gated agent page
+  openGraph: {
+    title: "LLP Agreement Generator | OnEasy",
+    description:
+      "Create LLP agreements with AI. MCA-compliant drafts, clause library, capital contribution mapping.",
+  },
+};
 
 export default function LLPLayout({ children }: { children: React.ReactNode }) {
   return (

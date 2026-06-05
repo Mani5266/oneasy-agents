@@ -3,6 +3,47 @@ import { Shield, FileText, Calculator, Users, Briefcase, ChevronRight, Check, St
 import { Navbar, RevealSection } from './components/LandingInteractive'
 import { createClient } from '@/lib/supabase/server'
 
+const SITE_URL = 'https://www.getnetworthcertificate.com'
+
+/* ─── JSON-LD Structured Data ─── */
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'OnEasy',
+  url: SITE_URL,
+  logo: `${SITE_URL}/favicon.ico`,
+  description:
+    'AI-powered business document generation platform for Indian businesses. Net worth certificates, partnership deeds, LLP agreements, offer letters, and salary calculations.',
+  email: 'hello@oneasy.ai',
+  telephone: '+91-8121750505',
+  address: { '@type': 'PostalAddress', addressCountry: 'IN' },
+}
+
+const webApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'OnEasy — AI Document Generation',
+  url: SITE_URL,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Any',
+  description:
+    'Generate net worth certificates, partnership deeds, LLP agreements, offer letters, and salary calculations instantly with AI.',
+  offers: {
+    '@type': 'Offer',
+    price: '199',
+    priceCurrency: 'INR',
+    availability: 'https://schema.org/InStock',
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.8',
+    ratingCount: '500',
+    bestRating: '5',
+    worstRating: '1',
+  },
+  provider: { '@type': 'Organization', name: 'OnEasy', url: SITE_URL },
+}
+
 /* ─── Data ─── */
 const agents = [
   {
@@ -64,6 +105,16 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ fontFamily: 'var(--font-inter)' }}>
+      {/* ─── JSON-LD Structured Data (SEO) ─── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationSchema) }}
+      />
+
       {/* ─── NAVBAR (client component) ─── */}
       <Navbar loggedIn={loggedIn} />
 

@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import "./salary.css";
 
-export const metadata = {
-  title: "Salary Calculator — Oneasy Agents",
+export const metadata: Metadata = {
+  title: "Salary Calculator India",
+  description:
+    "Calculate CTC breakdowns, generate payslips, optimize taxes. Handles PF, ESI, professional tax. India-compliant salary structure builder.",
+  robots: { index: false, follow: false }, // auth-gated agent page
+  openGraph: {
+    title: "Salary Calculator India | OnEasy",
+    description:
+      "Calculate CTC breakdowns, generate payslips, optimize taxes. PF, ESI, professional tax handled.",
+  },
 };
 
 export default function SalaryLayout({ children }: { children: ReactNode }) {
