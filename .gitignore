@@ -42,3 +42,15 @@ next-env.d.ts
 
 # Windows reserved device names (accidental creation)
 nul
+
+# Supabase CLI artifacts (local state, never push)
+supabase/.temp/
+supabase/.branches/
+supabase/seed.sql
+supabase/config.toml.local
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
