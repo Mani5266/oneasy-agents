@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
           .from("llp_form_agreements")
           .update({ pdf_url: storagePath })
           .eq("id", agreementId)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .is("deleted_at", null);
       } else {
         console.error("[llp-form/generate-pdf] Storage upload error:", uploadError);
       }

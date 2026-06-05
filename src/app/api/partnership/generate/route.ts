@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
           .from('partnership_documents')
           .select('version')
           .eq('deed_id', deedId)
+          .is('deleted_at', null)
           .order('version', { ascending: false })
           .limit(1)
           .single();
@@ -107,7 +108,8 @@ export async function POST(req: NextRequest) {
             .from('partnership_deeds')
             .update({ doc_url: storagePath })
             .eq('id', deedId)
-            .eq('user_id', user.id),
+            .eq('user_id', user.id)
+            .is('deleted_at', null),
         ]);
       }
     } catch (storageErr) {

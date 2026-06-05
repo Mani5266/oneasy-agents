@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
           .from("networth_certificates")
           .update({ pdf_url: urlData.publicUrl })
           .eq("id", certificateId)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .is("deleted_at", null);
       } else {
         console.error("[networth/generate-pdf] Storage upload error:", uploadError);
       }

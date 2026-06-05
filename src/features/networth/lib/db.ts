@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { FormDataSchema } from "./schemas";
 import { INITIAL_STATE } from "../hooks/useFormData";
 import { logAudit, snapshotVersion } from "./audit";
+import { softDelete } from "@/lib/db/soft-delete";
 import type { FormData, CertificateRecord, DocumentRecord } from "../types";
 
 async function requireUserId(): Promise<string> {
@@ -31,6 +32,7 @@ export async function saveCertificateDraft(formData: FormData): Promise<string> 
       salutation: formData.salutation || "",
       pan_number: clientPan,
       user_id: userId,
+      deleted_at: null, // restore if previously soft-deleted
     }, { onConflict: 'user_id,pan_number' })
     .select()
     .single();
@@ -69,6 +71,7 @@ export async function updateCertificateDraft(id: string, formData: FormData): Pr
     .select("form_data, client_id")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   // Certificate doesn't exist — signal caller to create a new one
@@ -128,6 +131,7 @@ export async function getCertificate(id: string): Promise<FormData> {
     .select("form_data")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   if (error) throw error;
@@ -151,6 +155,7 @@ export async function getAllCertificates(): Promise<CertificateRecord[]> {
       )
     `)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -174,6 +179,7 @@ export async function renameCertificate(id: string, newName: string): Promise<vo
     .select("form_data")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   if (fetchError) throw fetchError;
@@ -258,27 +264,18 @@ export async function deleteDocument(documentId: string): Promise<void> {
     .select("file_url")
     .eq("id", documentId)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   if (lookupError || !doc) {
     throw new Error("Document not found or access denied.");
   }
 
-  const { error: dbError } = await supabase
-    .from("networth_documents")
-    .delete()
-    .eq("id", documentId)
-    .eq("user_id", userId);
+  const result = await softDelete(supabase, "networth_documents", documentId, userId);
+  if (!result.ok) throw new Error(result.error ?? "Failed to delete document.");
 
-  if (dbError) throw dbError;
-
-  const { error: storageError } = await supabase.storage
-    .from("networth-documents")
-    .remove([doc.file_url]);
-
-  if (storageError) {
-    console.error("Failed to delete storage file (orphaned):", storageError);
-  }
+  // Storage file is intentionally preserved so soft-deleted rows remain recoverable.
+  // A future cleanup cron should hard-delete storage for rows with deleted_at older than the retention window.
 }
 
 export async function getDocuments(certificateId: string): Promise<DocumentRecord[]> {
@@ -287,7 +284,8 @@ export async function getDocuments(certificateId: string): Promise<DocumentRecor
     .from("networth_documents")
     .select("*")
     .eq("certificate_id", certificateId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("deleted_at", null);
 
   if (error) throw error;
 
@@ -327,22 +325,33 @@ export async function deleteCertificate(id: string): Promise<void> {
     .from("networth_documents")
     .select("file_url")
     .eq("certificate_id", id)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("deleted_at", null);
 
   const { data: cert } = await supabase
     .from("networth_certificates")
     .select("form_data")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
-  const { error } = await supabase
-    .from("networth_certificates")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
+  // Soft-delete certificate and cascade soft-delete to all its documents
+  const certResult = await softDelete(supabase, "networth_certificates", id, userId);
+  if (!certResult.ok) throw new Error(certResult.error ?? "Failed to delete certificate.");
 
-  if (error) throw error;
+  if (docs && docs.length > 0) {
+    // Soft-delete child documents in bulk (RLS still scopes to user)
+    const { error: docDelErr } = await supabase
+      .from("networth_documents")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("certificate_id", id)
+      .eq("user_id", userId)
+      .is("deleted_at", null);
+    if (docDelErr) {
+      console.error("[deleteCertificate] child documents soft-delete failed:", docDelErr.message);
+    }
+  }
 
   logAudit(
     userId,
@@ -353,11 +362,8 @@ export async function deleteCertificate(id: string): Promise<void> {
     null
   );
 
-  if (docs && docs.length > 0) {
-    const paths = docs.map(d => d.file_url);
-    const { error: storageErr } = await supabase.storage.from("networth-documents").remove(paths);
-    if (storageErr) {
-      console.error("Storage cleanup failed (orphaned files are harmless):", storageErr);
-    }
-  }
+  // Storage files intentionally preserved for soft-delete recoverability.
+  // (Previous behaviour hard-deleted storage; recover via deleted_at = NULL + the original paths.)
+  // `docs` is kept above so a future cleanup cron can purge orphan storage after retention window.
+  void docs;
 }

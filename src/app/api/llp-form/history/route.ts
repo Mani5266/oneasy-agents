@@ -16,6 +16,7 @@ export async function GET() {
     .from("llp_agreements")
     .select("id, llp_name, status, created_at, pdf_url")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(20);
 

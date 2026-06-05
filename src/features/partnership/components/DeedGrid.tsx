@@ -140,6 +140,7 @@ export function DeedGrid({ onViewDeed }: DeedGridProps) {
         .select('file_url, file_name')
         .eq('deed_id', id)
         .eq('file_type', 'application/pdf')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

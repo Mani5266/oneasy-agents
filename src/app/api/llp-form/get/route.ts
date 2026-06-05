@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     .select("*")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });

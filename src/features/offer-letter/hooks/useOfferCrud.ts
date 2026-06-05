@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { softDelete } from '@/lib/db/soft-delete';
 import type { OfferRecord, OfferPayload } from '../types';
 
 const TABLE = 'offerletter_offers';
@@ -41,6 +42,7 @@ export function useOfferCrud() {
     const { data, error } = await supabase
       .from(TABLE)
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as OfferRecord[];
@@ -51,17 +53,17 @@ export function useOfferCrud() {
       .from(TABLE)
       .select('*')
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
     if (error) throw error;
     return data as OfferRecord;
   }, [supabase]);
 
   const deleteOffer = useCallback(async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from(TABLE)
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    const result = await softDelete(supabase, 'offerletter_offers', id, user.id);
+    if (!result.ok) throw new Error(result.error ?? 'Failed to delete offer.');
   }, [supabase]);
 
   const saveOffer = useCallback(async (params: {

@@ -89,6 +89,7 @@ export async function getRecentCalculations(limit = 50) {
     const { data } = await client
       .from("salary_results")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(limit);
     return data ?? [];

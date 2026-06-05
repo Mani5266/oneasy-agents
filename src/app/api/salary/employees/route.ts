@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseClient } from "@/features/salary/lib/services/supabase";
 import { requireAuth } from "@/lib/api-auth";
+import { softDelete } from "@/lib/db/soft-delete";
 
 export async function GET() {
   const { user, error: authError } = await requireAuth();
@@ -14,6 +15,7 @@ export async function GET() {
     const { data } = await client
       .from("salary_employees")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     return NextResponse.json(data ?? []);
   } catch (e: unknown) {
@@ -85,6 +87,7 @@ export async function PUT(request: Request) {
       .from("salary_employees")
       .update(updates)
       .eq("id", id)
+      .is("deleted_at", null)
       .select("*")
       .single();
 
@@ -113,8 +116,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const { error } = await client.from("salary_employees").delete().eq("id", id);
-    if (error) throw error;
+    const result = await softDelete(client, "salary_employees", id, user.id);
+    if (!result.ok) {
+      return NextResponse.json({ detail: result.error ?? "Failed to delete employee" }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (e: unknown) {

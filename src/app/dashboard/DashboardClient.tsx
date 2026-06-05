@@ -53,12 +53,12 @@ export default function DashboardClient({ user, stats: initialStats }: Props) {
       if (!session?.user) return
       const uid = session.user.id
       const [nw, pt, llp, llpF, ol, sal] = await Promise.all([
-        supabase.from('networth_certificates').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'completed'),
-        supabase.from('partnership_deeds').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null),
-        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('is_done', true),
-        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'draft'),
-        supabase.from('offerletter_offers').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null),
-        supabase.from('salary_results').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('networth_certificates').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'completed').is('deleted_at', null),
+        supabase.from('partnership_deeds').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null).is('deleted_at', null),
+        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('is_done', true).is('deleted_at', null),
+        supabase.from('llp_agreements').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'draft').is('deleted_at', null),
+        supabase.from('offerletter_offers').select('*', { count: 'exact', head: true }).eq('user_id', uid).not('doc_url', 'is', null).is('deleted_at', null),
+        supabase.from('salary_results').select('*', { count: 'exact', head: true }).eq('user_id', uid).is('deleted_at', null),
       ])
       setStats({
         networth: nw.count ?? 0,

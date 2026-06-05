@@ -44,7 +44,7 @@ export default function LLPApp() {
     if (id) {
       setSessionId(id);
       hasInteracted.current = true;
-      supabase.from("llp_agreements").select("*").eq("id", id).single().then(({ data: dbData, error }) => {
+      supabase.from("llp_agreements").select("*").eq("id", id).is("deleted_at", null).single().then(({ data: dbData, error }: { data: any; error: any }) => {
         if (!error && dbData && dbData.data && Object.keys(dbData.data).length > 0) {
           setData(dbData.data as LLPData);
           setStep(dbData.step);
@@ -72,7 +72,7 @@ export default function LLPApp() {
       } else {
         await supabase.from("llp_agreements").update({
           data, step, updated_at: new Date().toISOString()
-        }).eq("id", sessionId);
+        }).eq("id", sessionId).is("deleted_at", null);
       }
     };
     const saveTimer = setTimeout(saveData, 1000);
@@ -141,7 +141,7 @@ export default function LLPApp() {
   const saveAgreement = async () => {
     if (sessionId) {
       // Draft exists — mark as completed
-      await supabase.from("llp_agreements").update({ is_done: true, data, updated_at: new Date().toISOString() }).eq("id", sessionId);
+      await supabase.from("llp_agreements").update({ is_done: true, data, updated_at: new Date().toISOString() }).eq("id", sessionId).is("deleted_at", null);
     } else {
       // No draft yet — create as completed directly
       const { data: { user } } = await supabase.auth.getUser();

@@ -3,6 +3,7 @@
 // Child tables: partnership_partners, partnership_addresses, partnership_documents
 
 import { supabase } from './supabase';
+import { softDelete } from '@/lib/db/soft-delete';
 import type {
   Deed,
   DeedDocument,
@@ -90,12 +91,14 @@ export async function dbGetDeeds(): Promise<Deed[]> {
   ({ data, error } = await supabase
     .from('partnership_deeds')
     .select('*, partnership_documents(count)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false }));
 
   if (error) {
     ({ data, error } = await supabase
       .from('partnership_deeds')
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }));
     if (error) throw error;
     return (data as Deed[]) || [];
@@ -115,6 +118,7 @@ export async function dbGetDeedById(id: string): Promise<Deed> {
     .from('partnership_deeds')
     .select('*')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
   if (deedErr) throw deedErr;
 
@@ -149,8 +153,9 @@ export async function dbGetDeedById(id: string): Promise<Deed> {
 // ── DELETE ───────────────────────────────────────────────────────────────────
 
 export async function dbDeleteDeed(id: string): Promise<void> {
-  const { error } = await supabase.from('partnership_deeds').delete().eq('id', id);
-  if (error) throw error;
+  const user_id = await getUserId();
+  const result = await softDelete(supabase, 'partnership_deeds', id, user_id);
+  if (!result.ok) throw new Error(result.error ?? 'Failed to delete deed.');
 }
 
 // ── SAVE (UPSERT) ───────────────────────────────────────────────────────────
@@ -251,6 +256,7 @@ export async function dbGetDocumentVersions(
     .from('partnership_documents')
     .select('*')
     .eq('deed_id', deedId)
+    .is('deleted_at', null)
     .order('version', { ascending: false });
   if (error) {
     console.warn(

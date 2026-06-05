@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('offerletter_offers')
           .update({ doc_url: storagePath })
-          .eq('id', offerId);
+          .eq('id', offerId)
+          .eq('user_id', user.id)
+          .is('deleted_at', null);
       }
     } catch {
       // Storage upload failed — still return the DOCX

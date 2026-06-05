@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { createClient } from "@supabase/supabase-js";
+import { softDelete } from "@/lib/db/soft-delete";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,12 +16,7 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const { error } = await supabaseAdmin
-    .from("llp_agreements")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const result = await softDelete(supabaseAdmin, "llp_agreements", id, userId);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
   return NextResponse.json({ success: true });
 }

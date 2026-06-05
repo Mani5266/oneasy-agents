@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { softDelete } from "@/lib/db/soft-delete";
 import type { LLPData } from "../types";
 
 export interface LLPAgreementRecord {
@@ -23,6 +24,7 @@ export async function getAllLLPAgreements(): Promise<LLPAgreementRecord[]> {
     .from("llp_agreements")
     .select("id, data, step, is_done, created_at, updated_at")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
@@ -48,6 +50,7 @@ export async function getLLPAgreement(id: string): Promise<{ data: LLPData; step
     .select("data, step, is_done")
     .eq("id", id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .single();
 
   if (error) throw error;
@@ -56,11 +59,6 @@ export async function getLLPAgreement(id: string): Promise<{ data: LLPData; step
 
 export async function deleteLLPAgreement(id: string): Promise<void> {
   const userId = await requireUserId();
-  const { error } = await supabase
-    .from("llp_agreements")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
-
-  if (error) throw error;
+  const result = await softDelete(supabase, "llp_agreements", id, userId);
+  if (!result.ok) throw new Error(result.error ?? "Failed to delete LLP agreement.");
 }

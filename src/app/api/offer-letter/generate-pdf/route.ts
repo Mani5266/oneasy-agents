@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
           .from("offerletter_offers")
           .update({ pdf_url: storagePath })
           .eq("id", offerId)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .is("deleted_at", null);
       } else {
         console.error("[offer-letter/generate-pdf] Storage upload error:", uploadError);
       }
