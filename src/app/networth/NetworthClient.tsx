@@ -402,11 +402,13 @@ function WizardShell() {
 
       // FIX 1: Read from ref instead of stale closure
       const newData = { ...dataRef.current };
-      if (!newData.nickname && newData.purpose) {
-        newData.nickname = newData.purpose
-          .split("_")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
+      if (!newData.nickname || (!newData.nickname.includes(" - ") && newData.fullName)) {
+        const purposeLabel = newData.purpose
+          ? newData.purpose.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+          : "";
+        newData.nickname = newData.fullName
+          ? `${purposeLabel} - ${newData.fullName}`.trim()
+          : purposeLabel || "Untitled";
         setData(newData);
       }
 
@@ -447,6 +449,27 @@ function WizardShell() {
       savingRef.current = false;
     }
   }, [certificateId, updateCertificateId, setData, toast, saveChatMap, loadHistory]);
+
+  // ── Auto-save: create draft as soon as purpose + name are filled ───────────
+  const autoSavedRef = useRef(false);
+  useEffect(() => {
+    // Only auto-create once (when no certificateId yet and both fields exist)
+    if (certificateId || autoSavedRef.current || savingRef.current) return;
+    if (!data.purpose || !data.fullName) return;
+
+    autoSavedRef.current = true;
+    const timer = setTimeout(() => {
+      handleSave(step);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [data.purpose, data.fullName, certificateId, handleSave, step]);
+
+  // Reset auto-save flag when starting a new certificate
+  useEffect(() => {
+    if (!certificateId) {
+      autoSavedRef.current = false;
+    }
+  }, [certificateId]);
 
   // ── Next with Zod validation ─────────────────────────────────────────────
 
