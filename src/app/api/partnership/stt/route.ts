@@ -5,6 +5,7 @@ import {
   getClientIdentifier,
   rateLimitResponse,
 } from "@/features/partnership/lib/ratelimit";
+import { checkDailyAiUsage, dailyAiUsageResponse } from "@/lib/ai-usage-limiter";
 import { createSupabaseServerClient } from "@/features/partnership/lib/supabase-server";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -43,6 +44,10 @@ export async function POST(req: NextRequest) {
     if (!rateResult.success) {
       return rateLimitResponse(rateResult.reset);
     }
+
+    // 1b. Daily cross-feature AI cap (Phase 5: cost control)
+    const daily = await checkDailyAiUsage(user.id);
+    if (!daily.allowed) return dailyAiUsageResponse(daily.limit, daily.resetAt);
 
     // 2. Parse FormData and extract audio file
     let formData: FormData;

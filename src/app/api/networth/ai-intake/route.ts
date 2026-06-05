@@ -6,6 +6,7 @@ import {
   rateLimitResponse,
   checkCsrfOrigin,
 } from "@/features/networth/lib/ratelimit";
+import { checkDailyAiUsage, dailyAiUsageResponse } from "@/lib/ai-usage-limiter";
 import { createSupabaseServerClient } from "@/features/networth/lib/supabase-server";
 import { FormDataSchema } from "@/features/networth/lib/schemas";
 import { logUsage } from "@/features/networth/lib/usage";
@@ -206,6 +207,10 @@ export async function POST(req: NextRequest) {
     if (!rateResult.success) {
       return rateLimitResponse(rateResult.reset);
     }
+
+    // 1b. Daily cross-feature AI cap (Phase 5: cost control)
+    const daily = await checkDailyAiUsage(user.id);
+    if (!daily.allowed) return dailyAiUsageResponse(daily.limit, daily.resetAt);
 
     // 2. Parse and validate request body
     let body: { messages?: unknown; currentExtractedData?: unknown };

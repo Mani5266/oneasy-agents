@@ -11,8 +11,19 @@ function client() {
   return _client;
 }
 
+// Cost-control caps for the shared LLP SDK helper. Phase 5: prevent unbounded
+// token output that could rack up Gemini bills. 8192 fits the largest deed
+// extraction JSON with comfortable headroom.
+const LLP_MAX_OUTPUT_TOKENS = 8192;
+
 export async function geminiText(prompt: string, files?: Array<{ base64: string; mimeType: string }>): Promise<string> {
-  const m = client().getGenerativeModel({ model: "gemini-2.5-flash" });
+  const m = client().getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      maxOutputTokens: LLP_MAX_OUTPUT_TOKENS,
+      temperature: 0.2,
+    },
+  });
 
   // For multimodal (vision) requests: images first, then prompt text.
   // Label each image so the model knows the card order.

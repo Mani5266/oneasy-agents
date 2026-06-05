@@ -3,7 +3,13 @@ import { geminiJSON } from "@/features/llp/lib/gemini";
 import { buildPrompt, buildSingleCardPrompt, buildExtractionResponse, AIReply, SingleCardExtraction } from "@/features/llp/lib/prompts";
 import { validateUpdates } from "@/features/llp/lib/validation";
 import { chatInputSchema } from "@/features/llp/lib/schemas";
-import { rateLimit, RATE_LIMITS, rateLimitResponse } from "@/features/llp/lib/rateLimit";
+import {
+  llpChatRateLimit,
+  checkDailyAiUsage,
+  dailyAiUsageResponse,
+  rateLimitResponse,
+  getUserIdentifier,
+} from "@/lib/ai-usage-limiter";
 import { createSupabaseServerClient } from "@/features/llp/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
@@ -14,10 +20,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit: 20 requests per hour per IP
-  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-  const rl = rateLimit(`${clientIp}:chat`, RATE_LIMITS.chat);
-  if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
+  // Per-route hourly rate limit (30/hr per user — Redis-backed, user-keyed)
+  const identifier = getUserIdentifier(req, user.id);
+  const rl = await llpChatRateLimit.check(identifier);
+  if (!rl.success) return rateLimitResponse(rl.reset);
+
+  // Daily cross-feature AI cap (100/day per user by default)
+  const daily = await checkDailyAiUsage(user.id);
+  if (!daily.allowed) return dailyAiUsageResponse(daily.limit, daily.resetAt);
 
   try {
     // Zod validation on incoming request body

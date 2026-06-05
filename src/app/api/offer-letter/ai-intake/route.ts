@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import {
+  offerLetterAiIntakeRateLimit,
+  checkDailyAiUsage,
+  dailyAiUsageResponse,
+  rateLimitResponse,
+  getUserIdentifier,
+} from "@/lib/ai-usage-limiter";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +84,15 @@ Response: { "message": "Perfect! Joining: July 1, 2025. Offer dated May 15, vali
 export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
+
+  // Per-route hourly rate limit (30/hr per user)
+  const identifier = getUserIdentifier(req, auth.user.id);
+  const rl = await offerLetterAiIntakeRateLimit.check(identifier);
+  if (!rl.success) return rateLimitResponse(rl.reset);
+
+  // Daily cross-feature AI cap (100/day per user by default)
+  const daily = await checkDailyAiUsage(auth.user.id);
+  if (!daily.allowed) return dailyAiUsageResponse(daily.limit, daily.resetAt);
 
   const { messages: rawMessages, currentExtractedData } = await req.json();
 

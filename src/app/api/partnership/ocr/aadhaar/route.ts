@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 import { verifyAuth, AuthError } from '@/features/partnership/lib/auth';
 import { ocrRateLimit, getClientIdentifier, rateLimitResponse } from '@/features/partnership/lib/ratelimit';
+import { checkDailyAiUsage, dailyAiUsageResponse } from '@/lib/ai-usage-limiter';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
     const id = getClientIdentifier(req, user.id);
     const rl = await ocrRateLimit.check(id);
     if (!rl.success) return rateLimitResponse(rl.reset);
+
+    // 2b. Daily cross-feature AI cap (Phase 5: cost control)
+    const daily = await checkDailyAiUsage(user.id);
+    if (!daily.allowed) return dailyAiUsageResponse(daily.limit, daily.resetAt);
 
     // 3. Parse body
     let body: { image?: unknown; mimeType?: unknown };
