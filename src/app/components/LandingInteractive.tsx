@@ -3,16 +3,37 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 /* ─── Scroll-aware Navbar (client) ─── */
-export function Navbar({ loggedIn = false }: { loggedIn?: boolean }) {
+export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Best-effort auth check — fails silently if Supabase unreachable.
+  // Default state (loggedIn=false) shows Login/Sign Up, which is the safe fallback.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        if (!supabase) return
+        const { data } = await supabase.auth.getUser()
+        if (!cancelled && data?.user) setLoggedIn(true)
+      } catch {
+        // Supabase unreachable — keep loggedIn=false
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (

@@ -56,20 +56,8 @@ function LoginPageInner() {
     const modeParam = searchParams.get('mode')
     if (modeParam === 'signup') setMode('signup')
 
-    supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: unknown } }) => {
-      if (user) {
-        try {
-          const checkRes = await fetch('/api/networth/check-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-          const checkData = await checkRes.json()
-          if (checkData.verified) { router.replace('/dashboard'); return }
-          await supabase.auth.signOut()
-        } catch { try { await supabase.auth.signOut() } catch {} }
-      }
-      const verified = searchParams.get('verified')
-      const errorParam = searchParams.get('error')
-      if (verified === 'true') setSuccess('Email verified successfully! Please sign in.')
-      else if (errorParam === 'expired') setError('Verification link has expired.')
-      else if (errorParam === 'invalid') setError('Invalid verification link.')
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) { router.replace('/dashboard'); return }
       setChecking(false)
     }).catch(() => { setChecking(false) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,21 +93,10 @@ function LoginPageInner() {
         if (password.length < 8) { setError('Password must be at least 8 characters.'); setLoading(false); return }
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
         if (signUpError) { setError(friendlyAuthError(signUpError.message)); setLoading(false); return }
-        if (data.session) await supabase.auth.signOut()
-        if (data.user?.id) {
-          try { await fetch('/api/networth/send-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, userId: data.user.id }) }) } catch {}
-        }
-        setSuccess('Account created! Check your email to verify, then sign in.')
-        setPassword(''); setConfirmPassword('')
+        router.replace('/dashboard')
       } else {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
         if (signInError) { setError(friendlyAuthError(signInError.message)); setLoading(false); return }
-        if (!signInData.user?.id) { await supabase.auth.signOut(); setError('Something went wrong.'); setLoading(false); return }
-        try {
-          const checkRes = await fetch('/api/networth/check-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-          const checkData = await checkRes.json()
-          if (!checkData.verified) { await supabase.auth.signOut(); setError('Please verify your email before logging in.'); setLoading(false); return }
-        } catch { await supabase.auth.signOut(); setError('Unable to verify account status.'); setLoading(false); return }
         router.replace('/dashboard')
       }
     } catch { setError('Something went wrong. Please try again.') }

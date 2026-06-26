@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Shield, FileText, Calculator, Users, Briefcase, ChevronRight, Check, Star, ArrowRight, Zap, Clock, Lock, BarChart3 } from 'lucide-react'
 import { Navbar, RevealSection } from './components/LandingInteractive'
-import { createClient } from '@/lib/supabase/server'
 
 const SITE_URL = 'https://www.getnetworthcertificate.com'
 
@@ -96,13 +95,6 @@ const whyChooseUs = [
 
 /* ─── Server Component ─── */
 export default async function LandingPage() {
-  let loggedIn = false;
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    loggedIn = !!data.user;
-  } catch {}
-
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ fontFamily: 'var(--font-inter)' }}>
       {/* ─── JSON-LD Structured Data (SEO) ─── */}
@@ -116,7 +108,7 @@ export default async function LandingPage() {
       />
 
       {/* ─── NAVBAR (client component) ─── */}
-      <Navbar loggedIn={loggedIn} />
+      <Navbar />
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
